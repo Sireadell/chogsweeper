@@ -51,7 +51,10 @@ export default function JudgePage() {
     <main className="page">
       <header className="mb-4 flex items-center justify-between gap-3">
         <Link href="/" className="text-sm font-semibold text-mute hover:text-white">← Chogsweeper</Link>
-        <span className="rounded-md border border-edge px-2 py-1 text-[12px] font-semibold uppercase tracking-wider text-mute">Judge mode · not ranked</span>
+        <span className="flex items-center gap-3">
+          <Link href="/practice" className="text-sm font-semibold text-mint underline-offset-2 hover:underline">Endless practice →</Link>
+          <span className="rounded-md border border-edge px-2 py-1 text-[12px] font-semibold uppercase tracking-wider text-mute">Judge mode · not ranked</span>
+        </span>
       </header>
 
       <form onSubmit={go} className="mx-auto mb-5 flex w-full max-w-[560px] flex-wrap items-end gap-2">

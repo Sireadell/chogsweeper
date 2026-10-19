@@ -8,6 +8,7 @@ import BonusChip from "./BonusChip";
 import CommitChip from "./CommitChip";
 import { pickSafeHint, type BonusInfo } from "@/lib/chogToken";
 import RuleCards from "./RuleCards";
+import ShareButton from "./ShareButton";
 
 export type Mode = "daily" | "practice" | "cotd";
 type Saved = { won: boolean; seconds: number; moves: number; usedHint?: boolean };
@@ -56,7 +57,7 @@ export default function GameScreen({
 
   // Save the finished day once.
   useEffect(() => {
-    if (mode === "cotd" && (state.status === "won" || state.status === "lost")) {
+    if ((mode === "cotd" || mode === "practice") && (state.status === "won" || state.status === "lost")) {
       onFinish?.({ won: state.status === "won", seconds: seconds(state), moves: state.moves });
       return;
     }
@@ -160,6 +161,9 @@ export default function GameScreen({
       {finished && (
         <Outcome meta={meta} won={finished.won} secs={finished.seconds} moves={finished.moves} mode={mode} onAgain={onAgain}
           rules={board.rules.map((r) => `${r.trait}: ${r.value}`)} />
+      )}
+      {finished?.won && (
+        <ShareButton name={meta.name} params={{ token: meta.id, date, time: Math.round(finished.seconds) }} cols={board.cols} rows={board.rows} />
       )}
 
       {footer}

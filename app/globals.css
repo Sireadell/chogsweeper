@@ -160,5 +160,11 @@ body {
 @keyframes hint-pulse { 50% { box-shadow: inset 0 0 0 2px #7dd3fc, 0 0 3px rgba(125, 211, 252, 0.3); } }
 @media (prefers-reduced-motion: reduce) { .tile-hint { animation: none; } }
 
+/* Reveal wall */
+.wall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 3px; }
+.wall-cell { aspect-ratio: 1; border-radius: 5px; background: #1a1430; overflow: hidden; content-visibility: auto; contain-intrinsic-size: 34px; }
+.wall-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wall-owned { outline: 2px solid var(--chog); outline-offset: -2px; }
+
 /* Chog of the day card */
 .cotd-card { border: 1px solid var(--edge); background: var(--panel); border-radius: 18px; padding: 16px; box-shadow: 0 20px 60px -40px rgba(131, 110, 249, 0.9); }

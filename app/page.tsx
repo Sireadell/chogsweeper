@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CotdCard from "@/components/CotdCard";
+import StreakChip from "@/components/StreakChip";
 
 // A decorative mini board: purple tiles with a few "cleared" windows showing a glow of art.
 const SHAPE = "1111111/1100011/1000001/1001101/1000001/1100011/1111111";
@@ -21,7 +22,8 @@ export default function Home() {
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/play" className="btn-main !px-8 !py-4 text-lg">Play</Link>
-            <Link href="/judge" className="btn-ghost !px-5 !text-[15px]">Judge mode, no wallet</Link>
+            <Link href="/practice" className="btn-ghost !px-5 !text-[15px]">Play unlimited, no wallet</Link>
+            <Link href="/judge" className="btn-ghost !px-5 !text-[15px]">Judge mode</Link>
           </div>
           {/* TODO-COPY */}
           <p className="mt-4 text-[13px] text-mute">
@@ -45,7 +47,12 @@ export default function Home() {
         </section>
       </div>
 
-      <div className="mt-10"><CotdCard /></div>
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <StreakChip />
+        <Link href="/wall" className="btn-ghost">Reveal wall</Link>
+      </div>
+
+      <div className="mt-6"><CotdCard /></div>
 
       {/* TODO-COPY */}
       <ol className="mt-12 grid gap-3 text-[14px] text-[#cfc9ea] sm:grid-cols-3">

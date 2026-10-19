@@ -7,6 +7,7 @@ import { todayUTC } from "@/components/dailySalt";
 import { useWallet } from "@/components/useWallet";
 import ChogArt from "@/components/ChogArt";
 import GameScreen from "@/components/GameScreen";
+import StreakChip, { rememberWallet } from "@/components/StreakChip";
 
 export default function PlayPage() {
   const { address, error, busy, connect, disconnect } = useWallet();
@@ -23,7 +24,7 @@ export default function PlayPage() {
     setChogs(null);
     setLoadErr(false);
     getOwnedChogMetas(address)
-      .then((m) => live && setChogs(m))
+      .then((m) => { if (live) { setChogs(m); rememberWallet(address, m.map((c) => c.id)); } })
       .catch(() => live && setLoadErr(true));
     return () => { live = false; };
   }, [address]);
@@ -51,6 +52,10 @@ export default function PlayPage() {
           </button>
         )}
       </header>
+
+      {address && chogs && chogs.length > 0 && (
+        <StreakChip address={address} ids={chogs.map((c) => c.id)} className="mb-4" />
+      )}
 
       {!address && (
         <section className="mx-auto max-w-[560px] text-center">
