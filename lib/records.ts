@@ -257,8 +257,8 @@ export class UpstashRecordStore implements RecordStore {
 let store: RecordStore | undefined;
 export function getStore(): RecordStore {
   if (store) return store;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
   return (store = url && token ? new UpstashRecordStore(url, token) : new FileRecordStore(process.env.CHOG_RECORDS_FILE));
 }
 export function setStore(s: RecordStore) {
