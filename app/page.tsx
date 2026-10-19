@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CotdCard from "@/components/CotdCard";
 
 // A decorative mini board: purple tiles with a few "cleared" windows showing a glow of art.
 const SHAPE = "1111111/1100011/1000001/1001101/1000001/1100011/1111111";
@@ -43,6 +44,8 @@ export default function Home() {
           </div>
         </section>
       </div>
+
+      <div className="mt-10"><CotdCard /></div>
 
       {/* TODO-COPY */}
       <ol className="mt-12 grid gap-3 text-[14px] text-[#cfc9ea] sm:grid-cols-3">

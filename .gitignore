@@ -11,3 +11,6 @@ CLAUDE.md
 *.tsbuildinfo
 .env
 .claude
+
+.vercel
+.env*

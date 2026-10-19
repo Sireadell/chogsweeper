@@ -1,4 +1,5 @@
 import { getStore, type ChogRecord } from "@/lib/records";
+import CotdCard from "@/components/CotdCard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hall of Chogs" };
@@ -51,6 +52,7 @@ export default async function HallPage() {
       <p style={{ opacity: 0.8, marginTop: 8, lineHeight: 1.5 }}>
         Records belong to the Chog, not the wallet. If a Chog is sold, its streak goes to the new owner with it.
       </p>
+      <div style={{ marginTop: 20 }}><CotdCard full /></div>
       <Table
         title="Longest streaks"
         rows={streaks}

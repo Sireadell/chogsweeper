@@ -4,11 +4,13 @@ import type { Board as BoardT, ChogMeta } from "@/lib/types";
 import { chord, flag, initGame, minesLeft, reveal, seconds, type GameState } from "./gameLogic";
 import Board from "./Board";
 import ChogArt from "./ChogArt";
+import BonusChip from "./BonusChip";
 import CommitChip from "./CommitChip";
+import { pickSafeHint, type BonusInfo } from "@/lib/chogToken";
 import RuleCards from "./RuleCards";
 
-export type Mode = "daily" | "practice";
-type Saved = { won: boolean; seconds: number; moves: number };
+export type Mode = "daily" | "practice" | "cotd";
+type Saved = { won: boolean; seconds: number; moves: number; usedHint?: boolean };
 
 const RULE_ICON: Record<string, string> = { "tier-size": "▦", "eyes-peek": "👁", "accessory-flag": "⚑", "head-shield": "🛡" };
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -21,11 +23,14 @@ function untilTomorrow(): string {
 }
 
 export default function GameScreen({
-  meta, board, mode, onAgain,
-}: { meta: ChogMeta; board: BoardT; mode: Mode; onAgain?: () => void }) {
+  meta, board, mode, onAgain, address, onFinish, footer,
+}: { meta: ChogMeta; board: BoardT; mode: Mode; onAgain?: () => void; address?: string | null; onFinish?: (r: { won: boolean; seconds: number; moves: number }) => void; footer?: React.ReactNode }) {
   const date = board.date;
   const [state, setState] = useState<GameState>(() => initGame(board));
   const [flagMode, setFlagMode] = useState(false);
+  const [bonus, setBonus] = useState<BonusInfo | null>(null);
+  const [hint, setHint] = useState<number | null>(null);
+  const [usedHint, setUsedHint] = useState(false);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [, tick] = useState(0);
   const storeKey = `chogsweeper:${meta.id}:${date}`;
@@ -33,6 +38,8 @@ export default function GameScreen({
   useEffect(() => {
     setState(initGame(board));
     setSaved(null);
+    setHint(null);
+    setUsedHint(false);
     if (mode === "daily") {
       try {
         const raw = localStorage.getItem(storeKey);
@@ -49,8 +56,12 @@ export default function GameScreen({
 
   // Save the finished day once.
   useEffect(() => {
+    if (mode === "cotd" && (state.status === "won" || state.status === "lost")) {
+      onFinish?.({ won: state.status === "won", seconds: seconds(state), moves: state.moves });
+      return;
+    }
     if (mode !== "daily" || (state.status !== "won" && state.status !== "lost")) return;
-    const result: Saved = { won: state.status === "won", seconds: seconds(state), moves: state.moves };
+    const result: Saved = { won: state.status === "won", seconds: seconds(state), moves: state.moves, ...(usedHint ? { usedHint: true } : {}) };
     try { localStorage.setItem(storeKey, JSON.stringify(result)); } catch { /* ignore */ }
     fetch("/api/record", {
       method: "POST",
@@ -61,6 +72,15 @@ export default function GameScreen({
 
   const done = state.status === "won" || state.status === "lost";
   const view: GameState | null = saved ? null : state;
+  const hintsLeft = Math.max(0, (bonus?.hints ?? 0) - (usedHint ? 1 : 0));
+  const canHint = mode === "daily" && !done && state.status === "playing" && hintsLeft > 0;
+  function useHint() {
+    const i = pickSafeHint(state.g.board, state.revealed, state.flagged);
+    if (i === null) return;
+    setHint(i);
+    setUsedHint(true);
+  }
+
   const finished = saved ?? (done ? { won: state.status === "won", seconds: seconds(state), moves: state.moves } : null);
 
   return (
@@ -69,7 +89,7 @@ export default function GameScreen({
         <div className="min-w-0">
           <h2 className="truncate text-xl font-extrabold tracking-tight text-white">{meta.name}</h2>
           <p className="text-[13px] text-mute">
-            Token #{meta.id} · {mode === "daily" ? `today's board, ${date} (UTC)` : "practice board, not ranked"}
+            Token #{meta.id} · {mode === "daily" ? `today's board, ${date} (UTC)` : mode === "cotd" ? `Chog of the day, ranked, ${date} (UTC)` : "practice board, not ranked"}
           </p>
         </div>
         <div className="flex shrink-0 gap-2 text-right tabular-nums">
@@ -95,6 +115,7 @@ export default function GameScreen({
             meta={meta}
             state={state}
             flagMode={flagMode}
+            hint={hint}
             onReveal={(i) => setState((s) => reveal(board, s, i))}
             onFlag={(i) => setState((s) => flag(s, i))}
             onChord={(i) => setState((s) => chord(board, s, i))}
@@ -120,10 +141,28 @@ export default function GameScreen({
         </>
       )}
 
+      {mode === "daily" && !saved && !done && (
+        <div className="mt-3 space-y-2">
+          <BonusChip address={address} hintsLeft={hintsLeft} onInfo={setBonus} />
+          {canHint && (
+            <button type="button" className="btn-ghost" onClick={useHint}>
+              Use my $CHOG hint
+            </button>
+          )}
+          {hint !== null && state.status === "playing" && !state.revealed[hint] && (
+            <p className="text-[12px] text-mute" role="status">
+              Row {Math.floor(hint / board.cols) + 1}, column {(hint % board.cols) + 1} is safe. Your record will be marked as hinted.
+            </p>
+          )}
+        </div>
+      )}
+
       {finished && (
         <Outcome meta={meta} won={finished.won} secs={finished.seconds} moves={finished.moves} mode={mode} onAgain={onAgain}
           rules={board.rules.map((r) => `${r.trait}: ${r.value}`)} />
       )}
+
+      {footer}
 
       <div className="mt-5 space-y-3">
         <h3 className="text-[13px] font-semibold uppercase tracking-wider text-mute">Rules from this Chog</h3>
@@ -158,7 +197,7 @@ function Outcome({ meta, won, secs, moves, mode, onAgain, rules }: {
           {rules.map((r) => (<li key={r} className="chip">{r}</li>))}
         </ul>
         {mode === "practice" && onAgain && <button className="btn-main mt-4" onClick={onAgain}>Play another Chog</button>}
-        {mode === "daily" && <p className="mt-3 text-[13px] text-mute">Next board in {untilTomorrow()}.</p>}
+        {mode !== "practice" && <p className="mt-3 text-[13px] text-mute">Next board in {untilTomorrow()}.</p>}
       </section>
     );
   }
@@ -166,7 +205,7 @@ function Outcome({ meta, won, secs, moves, mode, onAgain, rules }: {
     <section className="lost-card mt-4" aria-live="polite">
       <h3 className="text-2xl font-black text-white">Boom.</h3>
       <p className="mt-1 text-[14px] text-[#e7c9d0]">
-        {mode === "daily"
+        {mode !== "practice"
           ? `${meta.name} stays hidden today. A fresh board opens in ${untilTomorrow()}. Come back tomorrow.`
           : "That one got you. Practice boards are free, so try again."}
       </p>

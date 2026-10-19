@@ -34,7 +34,14 @@ export async function getOwnedChogs(address: string): Promise<number[]> {
   return owned;
 }
 
-const byId = new Map<number, ChogMeta>((chogsData as ChogMeta[]).map((c) => [c.id, c]));
+// Cheap check (one call) that a wallet holds at least one Chog.
+export async function holdsAnyChog(address: string): Promise<boolean> {
+  if (!isAddress(address)) return false;
+  const bal = await client.readContract({ address: CHOG_CONTRACT, abi, functionName: "balanceOf", args: [getAddress(address)] });
+  return bal > 0n;
+}
+
+const byId =new Map<number, ChogMeta>((chogsData as ChogMeta[]).map((c) => [c.id, c]));
 
 export async function getChogMeta(id: number): Promise<ChogMeta> {
   const m = byId.get(id);

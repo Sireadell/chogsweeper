@@ -15,9 +15,10 @@ type Props = {
   onFlag: (i: number) => void;
   onChord: (i: number) => void;
   disabled?: boolean;
+  hint?: number | null;
 };
 
-export default function Board({ board, meta, state, flagMode, onReveal, onFlag, onChord, disabled }: Props) {
+export default function Board({ board, meta, state, flagMode, onReveal, onFlag, onChord, disabled, hint }: Props) {
   const { cols, rows } = board;
   const [focus, setFocus] = useState(0);
   const press = useRef<{ t: ReturnType<typeof setTimeout> | null; long: boolean }>({ t: null, long: false });
@@ -78,6 +79,7 @@ export default function Board({ board, meta, state, flagMode, onReveal, onFlag, 
           if (i === board.freePeek) cls.push("tile-peek");
           if (i === board.freeFlag) cls.push("tile-gift");
           if (state.shieldedAt.includes(i)) cls.push("tile-shield");
+          if (hint === i && !rev && !fl) cls.push("tile-hint");
           const label = rev ? (c.adj ? `${c.adj} nearby` : "clear") : fl ? "flagged" : "hidden";
           return (
             <button

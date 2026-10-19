@@ -154,3 +154,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
 }
+
+/* $CHOG holder hint: one tile that is guaranteed safe */
+.tile-hint { box-shadow: inset 0 0 0 2px #7dd3fc, 0 0 12px rgba(125, 211, 252, 0.75); animation: hint-pulse 1.4s ease-in-out infinite; }
+@keyframes hint-pulse { 50% { box-shadow: inset 0 0 0 2px #7dd3fc, 0 0 3px rgba(125, 211, 252, 0.3); } }
+@media (prefers-reduced-motion: reduce) { .tile-hint { animation: none; } }
+
+/* Chog of the day card */
+.cotd-card { border: 1px solid var(--edge); background: var(--panel); border-radius: 18px; padding: 16px; box-shadow: 0 20px 60px -40px rgba(131, 110, 249, 0.9); }

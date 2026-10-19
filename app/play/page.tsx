@@ -95,7 +95,7 @@ export default function PlayPage() {
       {address && picked && (
         <>
           <button className="btn-ghost mb-4" onClick={() => setPicked(null)}>← Switch Chog</button>
-          {board ? <GameScreen meta={picked} board={board} mode="daily" /> : boardErr ? (
+          {board ? <GameScreen meta={picked} board={board} mode="daily" address={address} /> : boardErr ? (
             <p className="text-boom" role="alert">Could not load today's board. Check your connection and press Switch Chog, then pick again.</p>
           ) : <p className="text-mute" role="status">Loading today's board…</p>}
         </>
