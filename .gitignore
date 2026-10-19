@@ -1,0 +1,13 @@
+node_modules
+.next
+.env.local
+.env*.local
+data/records.json
+qa/
+DEMO_NOTES.md
+AGENTS.md
+CLAUDE.md
+.vercel
+*.tsbuildinfo
+.env
+.claude

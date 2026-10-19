@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #0c0916;
+  --panel: #16112a;
+  --edge: #2a2147;
+  --chog: #836ef9;
+  --mint: #8bf5c0;
+  --boom: #ff5d73;
+}
+
+html { color-scheme: dark; }
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 500px at 15% -10%, rgba(131, 110, 249, 0.22), transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, rgba(139, 245, 192, 0.08), transparent 60%),
+    var(--ink);
+  color: #ece9fb;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+
+@layer components {
+  .page { @apply mx-auto w-full max-w-[880px] px-4 pb-16 pt-5; }
+
+  .btn-main {
+    @apply inline-flex items-center justify-center rounded-full bg-chog px-6 py-3 text-base font-bold text-white transition;
+    box-shadow: 0 8px 28px -8px rgba(131, 110, 249, 0.8);
+  }
+  .btn-main:hover { filter: brightness(1.1); }
+  .btn-main:disabled { opacity: 0.6; }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-xl border border-edge bg-panel px-3 py-2 text-[13px] font-semibold text-[#d8d3f3] transition hover:border-chog;
+    min-height: 40px;
+  }
+  .btn-on { @apply border-mint text-mint; }
+
+  .chip { @apply rounded-full border border-edge bg-white/5 px-2.5 py-1 text-[12px] text-[#d8d3f3]; }
+
+  .pick-card { @apply w-full rounded-2xl border border-edge bg-panel p-2 text-left transition hover:border-chog; }
+
+  .rule-card {
+    @apply flex gap-3 rounded-xl border border-edge bg-panel p-3;
+    animation: rise 0.5s both ease-out;
+  }
+  .rule-used { border-color: rgba(255, 93, 115, 0.6); background: rgba(255, 93, 115, 0.08); }
+  .rule-ico { @apply grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-chog/20 text-base; }
+
+  .toast {
+    @apply mt-3 rounded-xl border px-3 py-2 text-[13px] text-white;
+    border-color: rgba(255, 93, 115, 0.6);
+    background: rgba(255, 93, 115, 0.12);
+    animation: rise 0.35s both ease-out;
+  }
+
+  .reveal-card {
+    @apply rounded-2xl border p-5;
+    border-color: rgba(139, 245, 192, 0.5);
+    background: linear-gradient(160deg, rgba(131, 110, 249, 0.25), rgba(139, 245, 192, 0.08));
+    animation: rise 0.8s 1.6s both ease-out;
+  }
+  .lost-card {
+    @apply rounded-2xl border p-5;
+    border-color: rgba(255, 93, 115, 0.5);
+    background: rgba(255, 93, 115, 0.08);
+    animation: rise 0.5s 0.4s both ease-out;
+  }
+}
+
+/* ---- Board: the Chog's art sits under the grid; cleared tiles are the window ---- */
+.board-wrap {
+  position: relative;
+  width: 100%;
+  max-width: min(100%, calc((100svh - 260px) * 1.0));
+  min-width: min(100%, 300px);
+  margin-inline: auto;
+  container-type: inline-size;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--edge);
+  background: #120d24;
+  box-shadow: 0 20px 60px -20px rgba(131, 110, 249, 0.45);
+  touch-action: manipulation;
+}
+.board-art { transition: filter 1.2s ease, transform 1.6s cubic-bezier(0.2, 0.8, 0.2, 1); user-select: none; }
+.board-shade { position: absolute; inset: 0; background: rgba(12, 9, 22, 0.28); transition: opacity 1.2s; pointer-events: none; }
+.board-grid { position: absolute; inset: 0; display: grid; }
+
+.tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  background: linear-gradient(155deg, #4b3a93, #2a1f59);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: inherit;
+  line-height: 1;
+  transition: opacity 0.7s ease var(--d), transform 0.7s ease var(--d), background 0.2s;
+}
+.tile:hover:not(.tile-open) { background: linear-gradient(155deg, #5e4cb0, #35286f); }
+.tile-open { background: transparent; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); cursor: default; }
+.tile-open:has(.num) { cursor: pointer; }
+.tile-flag { background: linear-gradient(155deg, #3b6f62, #1f3f38); }
+.tile-mine { background: rgba(255, 93, 115, 0.45); }
+.tile-hit { background: rgba(255, 93, 115, 0.9); }
+.tile-peek::after, .tile-gift::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--mint), 0 0 14px 2px rgba(139, 245, 192, 0.7);
+  animation: pulse 1.4s ease-in-out 4;
+  pointer-events: none;
+}
+.tile-gift::after { box-shadow: 0 0 0 2px #ffd166, 0 0 14px 2px rgba(255, 209, 102, 0.7); }
+.tile-shield::after { content: none; }
+.num {
+  font-weight: 900;
+  font-size: 1em;
+  text-shadow: 0 0 2px #000, 0 0 5px #000, 0 1px 8px #000;
+}
+.glyph { font-size: 0.9em; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+
+/* win: the tiles melt away in a wave from the top left and the art takes over */
+.board-wrap[data-status="won"] .tile { opacity: 0; transform: scale(0.6); pointer-events: none; transition-delay: calc(0.35s + var(--d)); }
+.board-wrap[data-status="won"] .board-shade { opacity: 0; transition-delay: 0.6s; }
+.board-wrap[data-status="won"] .board-art { animation: artpop 1.8s 0.6s both cubic-bezier(0.2, 0.8, 0.2, 1); }
+.board-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: sheen 1.6s 1.4s ease-out forwards;
+}
+.board-wrap[data-status="lost"] .board-art { filter: blur(14px) saturate(0.6) brightness(0.7); transform: scale(1.08); }
+
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes sheen { to { transform: translateX(120%); } }
+@keyframes artpop { 0% { transform: scale(1.0); filter: saturate(1); } 40% { transform: scale(1.06); filter: saturate(1.35) brightness(1.1); } 100% { transform: scale(1); filter: saturate(1.08); } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
+}
