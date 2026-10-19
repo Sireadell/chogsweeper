@@ -1,5 +1,5 @@
 // Posts a day's fingerprint to Monad: a 0 value transaction from the poster wallet to itself,
-// with the fingerprint as the data. Run: npx tsx scripts/post-commit.ts [YYYY-MM-DD] [--dry-run]
+// with the fingerprint as the data. Run: npx tsx scripts/post-commit.ts [YYYY-MM-DD] [--dry-run] [--local]
 // The private key is read from env POSTER_PRIVATE_KEY only. It is never printed or saved.
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -32,7 +32,12 @@ function save() {
 
 async function main() {
   if (!isValidDate(date)) throw new Error(`Bad date "${date}". Use YYYY-MM-DD.`);
-  const commit = dailyCommit(date);
+  // The live site holds the real secret, so by default the fingerprint is read from it. --local uses this machine's own secret.
+  const site = process.env.CHOG_SITE ?? "https://chogsweeper.vercel.app";
+  const commit = args.includes("--local")
+    ? dailyCommit(date)
+    : ((await (await fetch(`${site}/api/salt?date=${date}`)).json()) as { commit: string }).commit;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(commit)) throw new Error("Could not read a fingerprint from the site.");
   const existing = rows.find((r) => r.date === date);
   if (existing?.txHash) {
     console.log(`Already posted for ${date}: ${existing.txHash}`);
