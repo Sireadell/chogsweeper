@@ -3,7 +3,7 @@
 Chogsweeper is a daily puzzle game for the Chog Genesis NFT collection on Monad.
 Every one of the 1,969 Chogs gets its own minesweeper board each day, its traits change the rules, and clearing the board reveals that Chog's art.
 
-I built it because I wanted the Chog to be the game itself, not a picture pasted on top of one. 
+I wanted to see what happens when an NFT is the whole game, not the cover art.
 
 > **Can you clear your Chog today?**
 
