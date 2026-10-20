@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { verifyPath } from "@/lib/proofBadge";
 import { cardPath, formatTime, parseShareParams } from "@/lib/share";
 import { getChogMeta } from "../api/_deps";
 
@@ -42,7 +43,7 @@ export default async function SharePage({ searchParams }: { searchParams: SP }) 
       <img src={cardPath(p)} alt={`Chog #${p.token} cleared in ${formatTime(p.time)} on ${p.date}`} style={{ width: "100%", height: "auto", borderRadius: 16 }} />
       <div className="mt-5 flex flex-wrap gap-3">
         <Link className="btn-main" href="/">Play your Chog</Link>
-        <Link className="btn-ghost" href="/verify">Verify this board</Link>
+        <Link className="btn-ghost" href={verifyPath(p.date, p.token)}>Verify this board</Link>
       </div>
     </main>
   );

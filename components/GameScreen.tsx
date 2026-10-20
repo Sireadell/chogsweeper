@@ -9,6 +9,7 @@ import CommitChip from "./CommitChip";
 import { pickSafeHint, type BonusInfo } from "@/lib/chogToken";
 import RuleCards from "./RuleCards";
 import ShareButton from "./ShareButton";
+import ProofBadge from "./ProofBadge";
 
 export type Mode = "daily" | "practice" | "cotd";
 type Saved = { won: boolean; seconds: number; moves: number; usedHint?: boolean };
@@ -162,6 +163,7 @@ export default function GameScreen({
         <Outcome meta={meta} won={finished.won} secs={finished.seconds} moves={finished.moves} mode={mode} onAgain={onAgain}
           rules={board.rules.map((r) => `${r.trait}: ${r.value}`)} />
       )}
+      {finished?.won && mode !== "practice" && <ProofBadge date={date} token={meta.id} commit={board.commit} />}
       {finished?.won && (
         <ShareButton name={meta.name} params={{ token: meta.id, date, time: Math.round(finished.seconds) }} cols={board.cols} rows={board.rows} />
       )}

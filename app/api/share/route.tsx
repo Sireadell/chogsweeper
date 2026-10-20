@@ -2,8 +2,10 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { dailyCommit, utcToday } from "@/lib/salt";
+import { findCommit } from "@/lib/commits";
+import { proofBadge } from "@/lib/proofBadge";
 import { TIER_TABLE, DEFAULT_TIER } from "@/lib/engine";
-import { formatTime, parseShareParams, shortFingerprint } from "@/lib/share";
+import { formatTime, parseShareParams } from "@/lib/share";
 import { getChogMeta } from "../_deps";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +38,8 @@ export async function GET(req: Request) {
     return new Response("Unknown Chog.", { status: 404 });
   }
   const art = await artDataUrl(p.token);
-  const fp = shortFingerprint(dailyCommit(p.date));
+  const post = await findCommit(p.date).catch(() => undefined);
+  const badge = proofBadge({ date: p.date, token: p.token, commit: dailyCommit(p.date), posted: Boolean(post?.txHash) });
 
   return new ImageResponse(
     (
@@ -65,8 +68,13 @@ export async function GET(req: Request) {
             <div style={{ display: "flex", fontSize: 72, fontWeight: 800, color: "#8bf5c0" }}>{formatTime(p.time)}</div>
           </div>
         </div>
-        <div style={{ display: "flex", marginTop: 18, fontSize: 21, color: "#9a93c4" }}>
-          Verify this board: fingerprint {fp} at chogsweeper.vercel.app/verify
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 18, padding: "12px 20px", border: "2px solid #3d6b5a", borderRadius: 18, background: "#101f1c" }}>
+          <div style={{ display: "flex", fontSize: 24, color: "#8bf5c0", fontWeight: 700 }}>
+            {`${badge.headline}:  ${badge.fingerprint}`}
+          </div>
+          <div style={{ display: "flex", fontSize: 19, color: "#9a93c4", marginTop: 4 }}>
+            {`${post?.txHash ? "Fingerprint posted on Monad before the day ended." : "Fingerprint set for the day."} Check: chogsweeper.vercel.app${badge.verifyPath}`}
+          </div>
         </div>
       </div>
     ),
