@@ -10,6 +10,8 @@ import { pickSafeHint, type BonusInfo } from "@/lib/chogToken";
 import RuleCards from "./RuleCards";
 import ShareButton from "./ShareButton";
 import ProofBadge from "./ProofBadge";
+import SoundToggle from "./SoundToggle";
+import { play, readMuted, unlockAudio, writeMuted } from "@/lib/sound";
 
 export type Mode = "daily" | "practice" | "cotd";
 type Saved = { won: boolean; seconds: number; moves: number; usedHint?: boolean };
@@ -35,6 +37,7 @@ export default function GameScreen({
   const [usedHint, setUsedHint] = useState(false);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [, tick] = useState(0);
+  const [muted, setMuted] = useState(false);
   const storeKey = `chogsweeper:${meta.id}:${date}`;
 
   useEffect(() => {
@@ -49,6 +52,30 @@ export default function GameScreen({
       } catch { /* storage may be blocked, play still works */ }
     }
   }, [board, mode, storeKey]);
+
+  // Sound stays off until the first tap or key press (browser rule), then wins and losses can play.
+  useEffect(() => {
+    setMuted(readMuted());
+    const wake = () => unlockAudio();
+    window.addEventListener("pointerdown", wake, { once: true });
+    window.addEventListener("keydown", wake, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", wake);
+      window.removeEventListener("keydown", wake);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (state.status === "won") play("win", muted);
+    else if (state.status === "lost") play("lose", muted);
+  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleSound() {
+    unlockAudio();
+    const next = !muted;
+    setMuted(next);
+    writeMuted(next);
+  }
 
   useEffect(() => {
     if (state.status !== "playing") return;
@@ -99,6 +126,8 @@ export default function GameScreen({
           <Stat label="Time" value={fmt(view ? seconds(view) : saved!.seconds)} />
         </div>
       </div>
+
+      <div className="mb-2 flex justify-end"><SoundToggle muted={muted} onToggle={toggleSound} /></div>
 
       {!saved && board.rules.length > 0 && (
         <ul className="mb-3 flex flex-wrap gap-1.5" aria-label="Active rules">

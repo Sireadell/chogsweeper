@@ -109,6 +109,7 @@ export default function Board({ board, meta, state, flagMode, onReveal, onFlag, 
           );
         })}
       </div>
+      {won && <div className="board-burst" aria-hidden />}
       {won && <div className="board-sheen" aria-hidden />}
     </div>
   );

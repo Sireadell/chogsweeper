@@ -144,14 +144,31 @@ body {
   transform: translateX(-120%);
   animation: sheen 1.6s 1.4s ease-out forwards;
 }
+/* win burst: a ring of light spreads out from the middle as the art is revealed */
+.board-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20%;
+  aspect-ratio: 1;
+  margin: -10% 0 0 -10%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.55), rgba(139, 245, 192, 0.35) 40%, transparent 70%);
+  box-shadow: 0 0 0 3px rgba(139, 245, 192, 0.7);
+  opacity: 0;
+  animation: burst 1.3s 0.35s ease-out forwards;
+}
 .board-wrap[data-status="lost"] .board-art { filter: blur(14px) saturate(0.6) brightness(0.7); transform: scale(1.08); }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes burst { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(9); opacity: 0; } }
 @keyframes sheen { to { transform: translateX(120%); } }
 @keyframes artpop { 0% { transform: scale(1.0); filter: saturate(1); } 40% { transform: scale(1.06); filter: saturate(1.35) brightness(1.1); } 100% { transform: scale(1); filter: saturate(1.08); } }
 
 @media (prefers-reduced-motion: reduce) {
+  .board-burst, .board-sheen { display: none; }
   * { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
 }
 
