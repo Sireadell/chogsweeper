@@ -9,6 +9,19 @@ export default function Home() {
   const rows = SHAPE.split("/");
   return (
     <main className="page flex min-h-[100svh] flex-col justify-center">
+      <section aria-label="Try it in one minute" className="mb-8 rounded-2xl border border-chog/60 bg-panel p-5 sm:p-6">
+        <h2 className="text-[12px] font-bold uppercase tracking-[0.25em] text-mint">Try it in one minute, no wallet</h2>
+        <ol className="mt-3 grid gap-2 text-[15px] leading-snug text-[#cfc9ea] sm:grid-cols-3 sm:gap-4">
+          <li><b className="text-white">1.</b> Type any Chog number from 1 to 1969 (try 7).</li>
+          <li><b className="text-white">2.</b> Read the rule cards, then play.</li>
+          <li><b className="text-white">3.</b> Clear the board and the Chog's art appears.</li>
+        </ol>
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <Link href="/judge?id=7" className="btn-main !w-full !py-4 text-center text-lg sm:!w-auto sm:!px-8">Try Chog 7</Link>
+          <Link href="/practice" className="text-[14px] text-chog underline-offset-2 hover:underline">Play unlimited, no wallet</Link>
+        </div>
+      </section>
+
       <div className="grid items-center gap-8 md:grid-cols-[1.1fr_0.9fr]">
         <section>
           <p className="text-[12px] font-bold uppercase tracking-[0.25em] text-mint">Chogsweeper · a daily puzzle</p>
