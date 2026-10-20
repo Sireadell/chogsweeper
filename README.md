@@ -3,7 +3,7 @@
 Chogsweeper is a daily puzzle game for the Chog Genesis NFT collection on Monad.
 Every one of the 1,969 Chogs gets its own minesweeper board each day, its traits change the rules, and clearing the board reveals that Chog's art.
 
-I built it because I wanted the Chog to be the game itself, not a picture pasted on top of one. [founder: confirm or replace with your own reason]
+I built it because I wanted the Chog to be the game itself, not a picture pasted on top of one. 
 
 > **Can you clear your Chog today?**
 
@@ -97,6 +97,17 @@ Hold at least 1,000 $CHOG and you get one safe-tile hint per board. The tile glo
 
 ## Run it locally
 
+You do not need this to play. The live site above is the full game. This section is for anyone who wants to read or change the code.
+
+You need [Node.js](https://nodejs.org) 20 or newer and [Git](https://git-scm.com) installed.
+
+Get the code:
+
+```bash
+git clone https://github.com/Sireadell/chogsweeper.git
+cd chogsweeper
+```
+
 Install dependencies:
 
 ```bash
@@ -108,6 +119,8 @@ Start the site (a local secret is created for you the first time):
 ```bash
 npm run dev
 ```
+
+Then open http://localhost:3000 in your browser.
 
 Run the tests:
 
