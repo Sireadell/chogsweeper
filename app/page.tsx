@@ -11,12 +11,10 @@ export default function Home() {
     <main className="page flex min-h-[100svh] flex-col justify-center">
       <div className="grid items-center gap-8 md:grid-cols-[1.1fr_0.9fr]">
         <section>
-          {/* TODO-COPY: lead replaces the headline, line and badge below with final wording */}
           <p className="text-[12px] font-bold uppercase tracking-[0.25em] text-mint">Chogsweeper · a daily puzzle</p>
           <h1 className="mt-3 text-[40px] font-black leading-[1.02] tracking-tight text-white sm:text-6xl">
             Your Chog is<br />the board.
           </h1>
-          {/* TODO-COPY */}
           <p className="mt-4 max-w-[34ch] text-[17px] leading-relaxed text-[#cfc9ea]">
             Every Chog gets its own minesweeper board, new every day. Its traits change the rules. Clear the board and your Chog's artwork appears.
           </p>
@@ -25,7 +23,6 @@ export default function Home() {
             <Link href="/practice" className="btn-ghost !px-5 !text-[15px]">Play unlimited, no wallet</Link>
             <Link href="/judge" className="btn-ghost !px-5 !text-[15px]">Judge mode</Link>
           </div>
-          {/* TODO-COPY */}
           <p className="mt-4 text-[13px] text-mute">
             Judge mode: type any Chog from 1 to 1969 and play a practice board. <Link href="/verify" className="text-chog underline-offset-2 hover:underline">Check a board was fair</Link>
           </p>
@@ -54,7 +51,6 @@ export default function Home() {
 
       <div className="mt-6"><CotdCard /></div>
 
-      {/* TODO-COPY */}
       <ol className="mt-12 grid gap-3 text-[14px] text-[#cfc9ea] sm:grid-cols-3">
         <li className="rounded-xl border border-edge bg-panel p-4"><b className="text-white">1. Dig.</b> Tap a tile. Numbers tell you how many mines touch it.</li>
         <li className="rounded-xl border border-edge bg-panel p-4"><b className="text-white">2. Use your traits.</b> Eyes, accessory and head each bend a rule, and the screen tells you when one fires.</li>
