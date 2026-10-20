@@ -7,6 +7,8 @@ import GameScreen from "@/components/GameScreen";
 import CotdCard from "@/components/CotdCard";
 import { cotdMessage } from "@/lib/cotd-message";
 import { todayUTC } from "@/components/dailySalt";
+import { generateBoard, getChogMeta } from "@/components/deps";
+import { newPracticeSalt } from "@/lib/practice";
 
 type Phase = "ready" | "signing" | "playing";
 type Result = { rank: number | null; won: boolean } | { error: string };
@@ -22,6 +24,7 @@ export default function CotdPage() {
   const [msg, setMsg] = useState("");
   const [game, setGame] = useState<{ board: Board; meta: ChogMeta; date: string; sig: string } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [free, setFree] = useState<{ board: Board; meta: ChogMeta; round: number } | null>(null);
 
   async function start() {
     if (!address) return;
@@ -53,6 +56,18 @@ export default function CotdPage() {
     } catch {
       setMsg("Could not reach the server. Check your connection and try again.");
       setPhase("ready");
+    }
+  }
+
+  // Unranked try for visitors without a wallet. Uses a random practice salt and never calls the ranked API.
+  async function startFree() {
+    setMsg("");
+    try {
+      const today = await fetch("/api/cotd", { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject(new Error("bad"))));
+      const meta = await getChogMeta(today.tokenId);
+      setFree({ meta, board: generateBoard(meta, today.date, newPracticeSalt()), round: (free?.round ?? 0) + 1 });
+    } catch {
+      setMsg("Could not load today's Chog. Try again.");
     }
   }
 
@@ -98,7 +113,7 @@ export default function CotdPage() {
         )}
       </header>
 
-      {phase !== "playing" && (
+      {phase !== "playing" && !free && (
         <section className="mx-auto max-w-[620px]">
           <CotdCard hideActions />
           <div className="mt-5 text-center">
@@ -107,9 +122,14 @@ export default function CotdPage() {
                 <p className="text-[15px] text-[#cfc9ea]">Connect a wallet that holds any Chog Genesis NFT to take today's ranked try.</p>
                 <button className="btn-main mt-4" onClick={connect} disabled={busy}>{busy ? "Waiting for your wallet…" : "Connect wallet"}</button>
                 {error && <p className="mt-3 text-[14px] text-boom" role="alert">{error}</p>}
-                <p className="mt-5 text-[14px] text-mute">
-                  No wallet? <Link href="/judge" className="text-mint underline-offset-2 hover:underline">Judge mode</Link> lets you practice any Chog.
-                </p>
+                <div className="mt-5 border-t border-edge pt-5">
+                  <p className="text-[14px] text-[#cfc9ea]">No wallet? You can still play today's Chog. It will not be ranked.</p>
+                  <button className="btn-ghost mt-3" onClick={startFree}>Play today's Chog, unranked</button>
+                  {msg && <p className="mt-3 text-[14px] text-boom" role="alert">{msg}</p>}
+                  <p className="mt-3 text-[14px] text-mute">
+                    Or try <Link href="/judge" className="text-mint underline-offset-2 hover:underline">Judge mode</Link> with any Chog.
+                  </p>
+                </div>
               </>
             ) : (
               <>
@@ -124,6 +144,16 @@ export default function CotdPage() {
             )}
           </div>
         </section>
+      )}
+
+      {free && (
+        <>
+          <GameScreen key={free.round} meta={free.meta} board={free.board} mode="cotd-free" onAgain={startFree} />
+          <p className="mt-4 text-center text-[13px] text-mute">
+            Unranked try. Holders can take the ranked try with a wallet.{" "}
+            <button className="text-mint underline-offset-2 hover:underline" onClick={() => setFree(null)}>Back</button>
+          </p>
+        </>
       )}
 
       {phase === "playing" && game && (

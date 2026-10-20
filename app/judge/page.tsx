@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { ChogMeta } from "@/lib/types";
 import { CHOG_SUPPLY } from "@/lib/types";
+import { chogFromQuery } from "@/lib/names";
 import { generateBoard, getChogMeta } from "@/components/deps";
 import { todayUTC } from "@/components/dailySalt";
 import GameScreen from "@/components/GameScreen";
@@ -32,9 +33,9 @@ export default function JudgePage() {
   // A link like /judge?id=420&salt=abc replays the same practice board.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    const id = Number(q.get("id"));
+    const id = chogFromQuery(q, CHOG_SUPPLY);
     const fixed = q.get("salt") ?? undefined;
-    load(Number.isInteger(id) && id >= 1 && id <= CHOG_SUPPLY ? id : rand(), fixed);
+    load(id ?? rand(), fixed);
   }, [load]);
 
   function go(e: React.FormEvent) {

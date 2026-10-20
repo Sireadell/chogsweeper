@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { verifyPath } from "@/lib/proofBadge";
 import { cardPath, formatTime, parseShareParams } from "@/lib/share";
-import { getChogMeta } from "../api/_deps";
 
 type SP = Promise<{ token?: string; date?: string; time?: string }>;
 
@@ -11,10 +10,7 @@ const ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? "https://chogsweeper.vercel.a
 export async function generateMetadata({ searchParams }: { searchParams: SP }): Promise<Metadata> {
   const p = parseShareParams(await searchParams);
   if (!p) return { title: "Chogsweeper" };
-  let name = `Chog #${p.token}`;
-  try {
-    name = (await getChogMeta(p.token)).name || name;
-  } catch {}
+  const name = `Chog #${p.token}`;
   const title = `${name} cleared in ${formatTime(p.time)} on Chogsweeper`;
   const description = `Daily minesweeper board for ${p.date}. Every board can be checked against its fingerprint on Monad.`;
   const image = { url: ORIGIN + cardPath(p), width: 1080, height: 1350, alt: title };

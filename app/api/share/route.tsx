@@ -27,11 +27,10 @@ export async function GET(req: Request) {
   const p = parseShareParams({ token: q.get("token"), date: q.get("date"), time: q.get("time") });
   if (!p || p.date > utcToday()) return new Response("Bad card link.", { status: 400 });
 
-  let name = `Chog #${p.token}`;
+  const name = `Chog #${p.token}`;
   let size = TIER_TABLE[DEFAULT_TIER];
   try {
     const meta = await getChogMeta(p.token);
-    name = meta.name || name;
     const tier = meta.traits.find((t) => t.trait_type === "Tier")?.value;
     if (tier && TIER_TABLE[tier]) size = TIER_TABLE[tier];
   } catch {

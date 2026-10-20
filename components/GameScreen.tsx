@@ -11,9 +11,10 @@ import RuleCards from "./RuleCards";
 import ShareButton from "./ShareButton";
 import ProofBadge from "./ProofBadge";
 import SoundToggle from "./SoundToggle";
+import { artName, chogLabel } from "@/lib/names";
 import { play, readMuted, unlockAudio, writeMuted } from "@/lib/sound";
 
-export type Mode = "daily" | "practice" | "cotd";
+export type Mode = "daily" | "practice" | "cotd" | "cotd-free";
 type Saved = { won: boolean; seconds: number; moves: number; usedHint?: boolean };
 
 const RULE_ICON: Record<string, string> = { "tier-size": "▦", "eyes-peek": "👁", "accessory-flag": "⚑", "head-shield": "🛡" };
@@ -85,7 +86,7 @@ export default function GameScreen({
 
   // Save the finished day once.
   useEffect(() => {
-    if ((mode === "cotd" || mode === "practice") && (state.status === "won" || state.status === "lost")) {
+    if ((mode === "cotd" || mode === "cotd-free" || mode === "practice") && (state.status === "won" || state.status === "lost")) {
       onFinish?.({ won: state.status === "won", seconds: seconds(state), moves: state.moves });
       return;
     }
@@ -116,9 +117,9 @@ export default function GameScreen({
     <div className="mx-auto w-full max-w-[560px]">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-xl font-extrabold tracking-tight text-white">{meta.name}</h2>
+          <h2 className="truncate text-xl font-extrabold tracking-tight text-white">{chogLabel(meta.id)}</h2>
           <p className="text-[13px] text-mute">
-            Token #{meta.id} · {mode === "daily" ? `today's board, ${date} (UTC)` : mode === "cotd" ? `Chog of the day, ranked, ${date} (UTC)` : "practice board, not ranked"}
+            {artName(meta) ? `Art: ${artName(meta)} · ` : ""}{mode === "daily" ? `today's board, ${date} (UTC)` : mode === "cotd" ? `Chog of the day, ranked, ${date} (UTC)` : mode === "cotd-free" ? `Chog of the day, not ranked, ${date} (UTC)` : "practice board, not ranked"}
           </p>
         </div>
         <div className="flex shrink-0 gap-2 text-right tabular-nums">
@@ -192,9 +193,9 @@ export default function GameScreen({
         <Outcome meta={meta} won={finished.won} secs={finished.seconds} moves={finished.moves} mode={mode} onAgain={onAgain}
           rules={board.rules.map((r) => `${r.trait}: ${r.value}`)} />
       )}
-      {finished?.won && mode !== "practice" && <ProofBadge date={date} token={meta.id} commit={board.commit} />}
+      {finished?.won && mode !== "practice" && mode !== "cotd-free" && <ProofBadge date={date} token={meta.id} commit={board.commit} />}
       {finished?.won && (
-        <ShareButton name={meta.name} params={{ token: meta.id, date, time: Math.round(finished.seconds) }} cols={board.cols} rows={board.rows} />
+        <ShareButton name={chogLabel(meta.id)} params={{ token: meta.id, date, time: Math.round(finished.seconds) }} cols={board.cols} rows={board.rows} />
       )}
 
       {footer}
@@ -224,15 +225,15 @@ function Outcome({ meta, won, secs, moves, mode, onAgain, rules }: {
     return (
       <section className="reveal-card mt-4" aria-live="polite">
         <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-mint">Board cleared</p>
-        <h3 className="mt-1 text-3xl font-black tracking-tight text-white">{meta.name}</h3>
+        <h3 className="mt-1 text-3xl font-black tracking-tight text-white">{chogLabel(meta.id)}</h3>
         <p className="mt-1 text-[14px] text-[#cfc9ea]">
-          Cleared in {fmt(secs)} with {moves} moves.{mode === "practice" ? " Practice runs are not ranked." : ""}
+          Cleared in {fmt(secs)} with {moves} moves.{mode === "practice" ? " Practice runs are not ranked." : mode === "cotd-free" ? " This try is not ranked." : ""}
         </p>
         <ul className="mt-3 flex flex-wrap gap-1.5">
           {rules.map((r) => (<li key={r} className="chip">{r}</li>))}
         </ul>
-        {mode === "practice" && onAgain && <button className="btn-main mt-4" onClick={onAgain}>Play another Chog</button>}
-        {mode !== "practice" && <p className="mt-3 text-[13px] text-mute">Next board in {untilTomorrow()}.</p>}
+        {(mode === "practice" || mode === "cotd-free") && onAgain && <button className="btn-main mt-4" onClick={onAgain}>{mode === "cotd-free" ? "Play today's Chog again" : "Play another Chog"}</button>}
+        {mode !== "practice" && mode !== "cotd-free" && <p className="mt-3 text-[13px] text-mute">Next board in {untilTomorrow()}.</p>}
       </section>
     );
   }
@@ -240,11 +241,11 @@ function Outcome({ meta, won, secs, moves, mode, onAgain, rules }: {
     <section className="lost-card mt-4" aria-live="polite">
       <h3 className="text-2xl font-black text-white">Boom.</h3>
       <p className="mt-1 text-[14px] text-[#e7c9d0]">
-        {mode !== "practice"
-          ? `${meta.name} stays hidden today. A fresh board opens in ${untilTomorrow()}. Come back tomorrow.`
+        {mode !== "practice" && mode !== "cotd-free"
+          ? `${chogLabel(meta.id)} stays hidden today. A fresh board opens in ${untilTomorrow()}. Come back tomorrow.`
           : "That one got you. Practice boards are free, so try again."}
       </p>
-      {mode === "practice" && onAgain && <button className="btn-main mt-4" onClick={onAgain}>Try again</button>}
+      {(mode === "practice" || mode === "cotd-free") && onAgain && <button className="btn-main mt-4" onClick={onAgain}>Try again</button>}
     </section>
   );
 }

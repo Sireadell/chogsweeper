@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { FileRecordStore, UpstashRecordStore, rankCotd, type CotdEntry, type RecordStore } from "./records";
-import { chogOfDay, finishRanked, pickChogOfDay, startRanked, summarize, type CotdDeps } from "./cotd";
+import { chogOfDay, finishRanked, pickChogOfDay, recentClears, startRanked, summarize, type CotdDeps } from "./cotd";
 import { CHOG_SUPPLY } from "./types";
 
 // A tiny in-memory stand-in for the Upstash REST API: only the commands the store uses.
@@ -203,5 +203,24 @@ describe("ranked tries", () => {
     expect(sum.leaderboard).toEqual([]);
     expect(sum.yesterday.winner?.seconds).toBe(41);
     expect(rankCotd(await store.cotdEntries("2026-10-20"))).toEqual([]);
+  });
+});
+
+describe("cleared today and recent clears", () => {
+  const e = (wallet: string, won: boolean | undefined, seconds: number | undefined, finishedAt?: number): CotdEntry => ({
+    date: "2026-10-20", wallet, tokenId: 1, startedAt: 1, won, seconds, finishedAt,
+  });
+  it("counts wins only and lists the newest first", () => {
+    const list = [e("0xaaaaaaaa11", true, 40, 100), e("0xbbbbbbbb22", false, 9, 200), e("0xcccccccc33", true, 30, 300), e("0xdddddddd44", undefined, undefined)];
+    const r = recentClears(list);
+    expect(r.map((x) => x.seconds)).toEqual([30, 40]);
+    expect(recentClears(list, 1)).toHaveLength(1);
+  });
+  it("summarize reports zero clears without failing, and leaves unranked tries out", async () => {
+    const s = new FileRecordStore(path.join(mkdtempSync(path.join(tmpdir(), "chog-")), "r.json"));
+    const sum = await summarize(s, new Date("2026-10-20T10:00:00Z"));
+    expect(sum.cleared).toBe(0);
+    expect(sum.recent).toEqual([]);
+    expect(sum.attempts).toBe(0);
   });
 });

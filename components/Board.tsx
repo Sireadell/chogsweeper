@@ -65,7 +65,7 @@ export default function Board({ board, meta, state, flagMode, onReveal, onFlag, 
     <div className="board-wrap" data-status={state.status} style={{ aspectRatio: `${cols} / ${rows}` }}>
       <ChogArt src={meta.image} tokenId={meta.id} className="board-art absolute inset-0 h-full w-full" />
       <div className="board-shade" />
-      <div role="grid" aria-label={`${meta.name} board, ${cols} by ${rows}`} className="board-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, fontSize: `calc(46cqw / ${cols})` }}>
+      <div role="grid" aria-label={`Chog #${meta.id} board, ${cols} by ${rows}`} className="board-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, fontSize: `calc(46cqw / ${cols})` }}>
         {board.cells.map((_, i) => {
           const c = state.cells[i];
           const rev = state.revealed[i];

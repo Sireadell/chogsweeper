@@ -2,12 +2,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ChogArt from "./ChogArt";
+import { chogLabel } from "@/lib/names";
 
 export type CotdView = {
   date: string;
   tokenId: number;
   nextUtc: number;
   attempts: number;
+  cleared?: number;
+  recent?: { wallet: string; seconds: number; at: number }[];
   meta: { id: number; name: string; image: string };
   leaderboard: { rank: number; wallet: string; seconds: number; moves: number }[];
   yesterday: { date: string; tokenId: number; winner: { wallet: string; seconds: number } | null };
@@ -66,7 +69,7 @@ export default function CotdCard({ full = false, hideActions = false }: { full?:
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-mint">Chog of the day</p>
-          <h2 className="truncate text-xl font-black tracking-tight text-white">{data.meta.name}</h2>
+          <h2 className="truncate text-xl font-black tracking-tight text-white">{chogLabel(data.meta.id)}</h2>
           <p className="text-[13px] text-[#cfc9ea]">
             One shared board. Holders get one ranked try, fastest clear wins. New Chog in{" "}
             <b className="tabular-nums text-white">{clock || "--:--:--"}</b>
@@ -79,6 +82,15 @@ export default function CotdCard({ full = false, hideActions = false }: { full?:
           )}
         </div>
       </div>
+
+      {!full && (
+        <p className="mt-3 text-[13px] text-[#cfc9ea]" data-testid="cleared-today">
+          <b className="text-white">{data.cleared ?? 0}</b> ranked {(data.cleared ?? 0) === 1 ? "clear" : "clears"} today
+          {data.recent && data.recent.length > 0 && (
+            <> · latest: {data.recent.slice(0, 3).map((r) => `${r.wallet} in ${fmt(r.seconds)}`).join(", ")}</>
+          )}
+        </p>
+      )}
 
       <div className="mt-4 grid gap-4 text-[14px] sm:grid-cols-2">
         <div>

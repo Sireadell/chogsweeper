@@ -96,10 +96,21 @@ export type CotdSummary = {
   tokenId: number;
   nextUtc: number;
   attempts: number;
+  cleared: number; // ranked wins today
+  recent: { wallet: string; seconds: number; at: number }[]; // latest ranked wins, newest first
   leaderboard: { rank: number; wallet: string; seconds: number; moves: number }[];
   yesterday: { date: string; tokenId: number; winner: { wallet: string; seconds: number } | null };
   mine?: { started: boolean; finished: boolean; won?: boolean; seconds?: number; rank: number | null };
 };
+
+// The latest few ranked wins, newest first.
+export function recentClears(entries: CotdEntry[], n = 5): CotdSummary["recent"] {
+  return entries
+    .filter((e) => e.won === true && typeof e.seconds === "number")
+    .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
+    .slice(0, n)
+    .map((e) => ({ wallet: shortWallet(e.wallet), seconds: e.seconds!, at: e.finishedAt ?? 0 }));
+}
 
 export async function summarize(store: RecordStore, now: Date = new Date(), address?: string | null): Promise<CotdSummary> {
   const date = utcToday(now);
@@ -113,6 +124,8 @@ export async function summarize(store: RecordStore, now: Date = new Date(), addr
     tokenId: chogOfDay(date),
     nextUtc: nextUtcMidnight(now),
     attempts: entries.length,
+    cleared: ranked.length,
+    recent: recentClears(entries),
     leaderboard: board,
     yesterday: { date: prev, tokenId: chogOfDay(prev), winner: win ? { wallet: shortWallet(win.wallet), seconds: win.seconds! } : null },
   };
