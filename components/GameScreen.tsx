@@ -13,6 +13,7 @@ import ProofBadge from "./ProofBadge";
 import SoundToggle from "./SoundToggle";
 import { artName, chogLabel } from "@/lib/names";
 import { play, readMuted, unlockAudio, writeMuted } from "@/lib/sound";
+import type { Move } from "@/lib/game";
 
 export type Mode = "daily" | "practice" | "cotd" | "cotd-free";
 type Saved = { won: boolean; seconds: number; moves: number; usedHint?: boolean };
@@ -29,7 +30,7 @@ function untilTomorrow(): string {
 
 export default function GameScreen({
   meta, board, mode, onAgain, address, onFinish, footer,
-}: { meta: ChogMeta; board: BoardT; mode: Mode; onAgain?: () => void; address?: string | null; onFinish?: (r: { won: boolean; seconds: number; moves: number }) => void; footer?: React.ReactNode }) {
+}: { meta: ChogMeta; board: BoardT; mode: Mode; onAgain?: () => void; address?: string | null; onFinish?: (r: { won: boolean; seconds: number; moves: number; moveList?: Move[] }) => void; footer?: React.ReactNode }) {
   const date = board.date;
   const [state, setState] = useState<GameState>(() => initGame(board));
   const [flagMode, setFlagMode] = useState(false);
@@ -71,6 +72,23 @@ export default function GameScreen({
     else if (state.status === "lost") play("lose", muted);
   }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Personal best per board size, kept in this browser only.
+  const [bestNote, setBestNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (state.status !== "won") { setBestNote(null); return; }
+    const secs = seconds(state);
+    const key = `chogsweeper:best:${board.cols}x${board.rows}`;
+    try {
+      const prev = Number(localStorage.getItem(key));
+      if (!prev || secs < prev) {
+        localStorage.setItem(key, String(secs));
+        setBestNote(prev ? `New personal best! ${fmt(prev - secs)} faster than before.` : "That is your first time on this board size. Beat it next round.");
+      } else {
+        setBestNote(`Your best on this board size is ${fmt(prev)}. ${fmt(secs - prev)} to beat.`);
+      }
+    } catch { /* storage may be blocked */ }
+  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function toggleSound() {
     unlockAudio();
     const next = !muted;
@@ -87,7 +105,8 @@ export default function GameScreen({
   // Save the finished day once.
   useEffect(() => {
     if ((mode === "cotd" || mode === "cotd-free" || mode === "practice") && (state.status === "won" || state.status === "lost")) {
-      onFinish?.({ won: state.status === "won", seconds: seconds(state), moves: state.moves });
+      // moveList is the full move log (the Daily Pot server replays it). Existing callers ignore it.
+      onFinish?.({ won: state.status === "won", seconds: seconds(state), moves: state.moves, moveList: state.g.moves.slice() });
       return;
     }
     if (mode !== "daily" || (state.status !== "won" && state.status !== "lost")) return;
@@ -112,98 +131,114 @@ export default function GameScreen({
   }
 
   const finished = saved ?? (done ? { won: state.status === "won", seconds: seconds(state), moves: state.moves } : null);
+  const sub =
+    mode === "daily" ? `Today's board, ${date} (UTC)`
+      : mode === "cotd" ? `Chog of the day, ranked, ${date} (UTC)`
+        : mode === "cotd-free" ? `Chog of the day, not ranked, ${date} (UTC)`
+          : "Practice board, not ranked";
 
   return (
-    <div className="mx-auto w-full max-w-[560px]">
-      <div className="mb-3 flex items-end justify-between gap-3">
+    <div className="mx-auto w-full max-w-[1060px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8">
+        {/* Left: name, live stats and the board */}
         <div className="min-w-0">
-          <h2 className="truncate text-xl font-extrabold tracking-tight text-white">{chogLabel(meta.id)}</h2>
-          <p className="text-[13px] text-mute">
-            {artName(meta) ? `Art: ${artName(meta)} · ` : ""}{mode === "daily" ? `today's board, ${date} (UTC)` : mode === "cotd" ? `Chog of the day, ranked, ${date} (UTC)` : mode === "cotd-free" ? `Chog of the day, not ranked, ${date} (UTC)` : "practice board, not ranked"}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2 text-right tabular-nums">
-          <Stat label="Mines left" value={view ? String(minesLeft(board, view)) : String(board.mines)} />
-          <Stat label="Time" value={fmt(view ? seconds(view) : saved!.seconds)} />
-        </div>
-      </div>
-
-      <div className="mb-2 flex justify-end"><SoundToggle muted={muted} onToggle={toggleSound} /></div>
-
-      {!saved && board.rules.length > 0 && (
-        <ul className="mb-3 flex flex-wrap gap-1.5" aria-label="Active rules">
-          {board.rules.map((r) => (
-            <li key={r.id} className="chip">{RULE_ICON[r.id] ?? "✦"} {r.trait}: {r.value}</li>
-          ))}
-        </ul>
-      )}
-
-      {saved ? (
-        <SavedDay meta={meta} saved={saved} />
-      ) : (
-        <>
-          <Board
-            board={board}
-            meta={meta}
-            state={state}
-            flagMode={flagMode}
-            hint={hint}
-            onReveal={(i) => setState((s) => reveal(board, s, i))}
-            onFlag={(i) => setState((s) => flag(s, i))}
-            onChord={(i) => setState((s) => chord(board, s, i))}
-          />
-          {!done && (
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                aria-pressed={flagMode}
-                onClick={() => setFlagMode((f) => !f)}
-                className={`btn-ghost ${flagMode ? "btn-on" : ""}`}
-              >
-                ⚑ Flag mode {flagMode ? "on" : "off"}
-              </button>
-              <p className="text-right text-[12px] leading-snug text-mute">
-                Tap to dig. Hold a tile to flag.<br />Tap a number to clear around it.
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="truncate text-[26px] font-extrabold leading-tight tracking-tight text-white sm:text-[30px]">{chogLabel(meta.id)}</h2>
+              <p className="text-[13px] text-mute">
+                {sub}{artName(meta) ? ` · Art: ${artName(meta)}` : ""}
               </p>
             </div>
-          )}
-          {state.shieldedAt.length > 0 && !done && (
-            <p className="toast" role="status">🛡 Your Head shield took that hit. It is used up now.</p>
-          )}
-        </>
-      )}
+            <div className="flex shrink-0 items-stretch gap-2 text-right">
+              <Stat label="Mines left" value={view ? String(minesLeft(board, view)) : String(board.mines)} />
+              <Stat label="Time" value={fmt(view ? seconds(view) : saved!.seconds)} />
+            </div>
+          </div>
 
-      {mode === "daily" && !saved && !done && (
-        <div className="mt-3 space-y-2">
-          <BonusChip address={address} hintsLeft={hintsLeft} onInfo={setBonus} />
-          {canHint && (
-            <button type="button" className="btn-ghost" onClick={useHint}>
-              Use my $CHOG hint
-            </button>
-          )}
-          {hint !== null && state.status === "playing" && !state.revealed[hint] && (
-            <p className="text-[12px] text-mute" role="status">
-              Row {Math.floor(hint / board.cols) + 1}, column {(hint % board.cols) + 1} is safe. Your record will be marked as hinted.
-            </p>
+          <div className="mb-3 flex items-start justify-between gap-2">
+            {!saved && board.rules.length > 0 ? (
+              <ul className="flex flex-wrap gap-1.5" aria-label="Active rules">
+                {board.rules.map((r) => (
+                  <li key={r.id} className="chip"><span aria-hidden>{RULE_ICON[r.id] ?? "✦"}</span> {r.trait}: {r.value}</li>
+                ))}
+              </ul>
+            ) : <span />}
+            <SoundToggle muted={muted} onToggle={toggleSound} />
+          </div>
+
+          {saved ? (
+            <SavedDay meta={meta} saved={saved} />
+          ) : (
+            <>
+              <Board
+                board={board}
+                meta={meta}
+                state={state}
+                flagMode={flagMode}
+                hint={hint}
+                onReveal={(i) => setState((s) => reveal(board, s, i))}
+                onFlag={(i) => setState((s) => flag(s, i))}
+                onChord={(i) => setState((s) => chord(board, s, i))}
+              />
+              {!done && (
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    aria-pressed={flagMode}
+                    onClick={() => setFlagMode((f) => !f)}
+                    className={`btn-ghost !min-h-[44px] !px-4 !text-[14px] ${flagMode ? "btn-on" : ""}`}
+                  >
+                    ⚑ Flag mode {flagMode ? "on" : "off"}
+                  </button>
+                  <p className="text-right text-[12px] leading-snug text-mute">
+                    Tap to dig. Hold a tile to flag.<br />Tap a number to clear around it.
+                  </p>
+                </div>
+              )}
+              {state.shieldedAt.length > 0 && !done && (
+                <p className="toast" role="status">🛡 Your Head shield took that hit. It is used up now.</p>
+              )}
+            </>
           )}
         </div>
-      )}
 
-      {finished && (
-        <Outcome meta={meta} won={finished.won} secs={finished.seconds} moves={finished.moves} mode={mode} onAgain={onAgain}
-          rules={board.rules.map((r) => `${r.trait}: ${r.value}`)} />
-      )}
-      {finished?.won && mode !== "practice" && mode !== "cotd-free" && <ProofBadge date={date} token={meta.id} commit={board.commit} />}
-      {finished?.won && (
-        <ShareButton name={chogLabel(meta.id)} params={{ token: meta.id, date, time: Math.round(finished.seconds) }} cols={board.cols} rows={board.rows} />
-      )}
+        {/* Right on desktop, below the board on phones: result, bonus, rules and fingerprint */}
+        <aside className="min-w-0 space-y-4" aria-label="Board details">
+          {finished && (
+            <div>
+              <Outcome meta={meta} won={finished.won} secs={finished.seconds} moves={finished.moves} mode={mode} onAgain={onAgain}
+                rules={board.rules.map((r) => `${r.trait}: ${r.value}`)} size={`${board.cols} by ${board.rows}`} bestNote={saved ? null : bestNote} />
+              {finished.won && mode !== "practice" && mode !== "cotd-free" && <ProofBadge date={date} token={meta.id} commit={board.commit} />}
+              {finished.won && (
+                <ShareButton name={chogLabel(meta.id)} params={{ token: meta.id, date, time: Math.round(finished.seconds) }} cols={board.cols} rows={board.rows} />
+              )}
+            </div>
+          )}
 
-      {footer}
+          {mode === "daily" && !saved && !done && (
+            <div className="space-y-2">
+              <BonusChip address={address} hintsLeft={hintsLeft} onInfo={setBonus} />
+              {canHint && (
+                <button type="button" className="btn-ghost" onClick={useHint}>
+                  Use my $CHOG hint
+                </button>
+              )}
+              {hint !== null && state.status === "playing" && !state.revealed[hint] && (
+                <p className="text-[12px] text-mute" role="status">
+                  Row {Math.floor(hint / board.cols) + 1}, column {(hint % board.cols) + 1} is safe. Your record will be marked as hinted.
+                </p>
+              )}
+            </div>
+          )}
 
-      <div className="mt-5 space-y-3">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wider text-mute">Rules from this Chog</h3>
-        <RuleCards board={board} state={state} />
-        <CommitChip commit={board.commit} />
+          {footer}
+
+          <div className="space-y-3">
+            <h3 className="text-[13px] font-bold uppercase tracking-[0.14em] text-mute">Rules from this Chog</h3>
+            <RuleCards board={board} state={state} />
+            <CommitChip commit={board.commit} />
+          </div>
+        </aside>
       </div>
     </div>
   );
@@ -211,48 +246,63 @@ export default function GameScreen({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-[68px] rounded-xl border border-edge bg-panel px-3 py-1.5">
-      <div className="text-[11px] uppercase tracking-wide text-mute">{label}</div>
-      <div className="text-lg font-bold leading-tight text-white">{value}</div>
+    <div className="stat-tile min-w-[78px]">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
     </div>
   );
 }
 
-function Outcome({ meta, won, secs, moves, mode, onAgain, rules }: {
-  meta: ChogMeta; won: boolean; secs: number; moves: number; mode: Mode; onAgain?: () => void; rules: string[];
+function Outcome({ meta, won, secs, moves, mode, onAgain, rules, size, bestNote }: {
+  meta: ChogMeta; won: boolean; secs: number; moves: number; mode: Mode; onAgain?: () => void; rules: string[]; size: string; bestNote?: string | null;
 }) {
   if (won) {
     return (
-      <section className="reveal-card mt-4" aria-live="polite">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-mint">Board cleared</p>
-        <h3 className="mt-1 text-3xl font-black tracking-tight text-white">{chogLabel(meta.id)}</h3>
-        <p className="mt-1 text-[14px] text-[#cfc9ea]">
+      <section className="reveal-card" aria-live="polite">
+        <div className="flex items-center gap-4">
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-mint/60 shadow-[0_10px_30px_-10px_rgba(139,245,192,0.7)] [container-type:inline-size]">
+            <ChogArt src={meta.image} tokenId={meta.id} className="h-full w-full" />
+          </div>
+          <div className="min-w-0">
+            <p className="eyebrow">Board cleared</p>
+            <h3 className="mt-1 truncate text-[30px] font-extrabold leading-none tracking-tight text-white">{chogLabel(meta.id)}</h3>
+            <p className="mt-1.5 text-[13px] text-text2">Its art is fully revealed.</p>
+          </div>
+        </div>
+        <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div className="stat-tile"><dt className="stat-label">Time</dt><dd className="stat-value">{fmt(secs)}</dd></div>
+          <div className="stat-tile"><dt className="stat-label">Moves</dt><dd className="stat-value">{moves}</dd></div>
+          <div className="stat-tile"><dt className="stat-label">Board</dt><dd className="stat-value !text-[16px] !leading-[28px]">{size}</dd></div>
+        </dl>
+        <p className="mt-3 text-[14px] text-text2">
           Cleared in {fmt(secs)} with {moves} moves.{mode === "practice" ? " Practice runs are not ranked." : mode === "cotd-free" ? " This try is not ranked." : ""}
         </p>
+        {bestNote && <p className="mt-2 text-[14px] font-semibold text-mint" data-testid="best-note">{bestNote}</p>}
         <ul className="mt-3 flex flex-wrap gap-1.5">
           {rules.map((r) => (<li key={r} className="chip">{r}</li>))}
         </ul>
-        {(mode === "practice" || mode === "cotd-free") && onAgain && <button className="btn-main mt-4" onClick={onAgain}>{mode === "cotd-free" ? "Play today's Chog again" : "Play another Chog"}</button>}
+        {(mode === "practice" || mode === "cotd-free") && onAgain && <button className="btn-main mt-4 w-full sm:w-auto" onClick={onAgain}>{mode === "cotd-free" ? "Play today's Chog again" : "Play another Chog"}</button>}
         {mode !== "practice" && mode !== "cotd-free" && <p className="mt-3 text-[13px] text-mute">Next board in {untilTomorrow()}.</p>}
       </section>
     );
   }
   return (
-    <section className="lost-card mt-4" aria-live="polite">
-      <h3 className="text-2xl font-black text-white">Boom.</h3>
-      <p className="mt-1 text-[14px] text-[#e7c9d0]">
+    <section className="lost-card" aria-live="polite">
+      <p className="eyebrow !text-[#ff9aab]">Mine hit</p>
+      <h3 className="mt-1 text-[30px] font-extrabold leading-none text-white">Boom.</h3>
+      <p className="mt-2 text-[14px] text-[#f0d3da]">
         {mode !== "practice" && mode !== "cotd-free"
           ? `${chogLabel(meta.id)} stays hidden today. A fresh board opens in ${untilTomorrow()}. Come back tomorrow.`
           : "That one got you. Practice boards are free, so try again."}
       </p>
-      {(mode === "practice" || mode === "cotd-free") && onAgain && <button className="btn-main mt-4" onClick={onAgain}>Try again</button>}
+      {(mode === "practice" || mode === "cotd-free") && onAgain && <button className="btn-main mt-4 w-full sm:w-auto" onClick={onAgain}>Try again</button>}
     </section>
   );
 }
 
 function SavedDay({ meta, saved }: { meta: ChogMeta; saved: Saved }) {
   return (
-    <div className="board-wrap" data-status={saved.won ? "won" : "lost"} style={{ aspectRatio: "1 / 1" }}>
+    <div className="board-wrap board-saved" data-status={saved.won ? "won" : "lost"} style={{ aspectRatio: "1 / 1" }}>
       <ChogArt src={meta.image} tokenId={meta.id} className="board-art absolute inset-0 h-full w-full" />
       <div className="board-shade" />
       {saved.won && <div className="board-sheen" aria-hidden />}

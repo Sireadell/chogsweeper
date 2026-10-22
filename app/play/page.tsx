@@ -7,6 +7,7 @@ import { todayUTC } from "@/components/dailySalt";
 import { useWallet } from "@/components/useWallet";
 import ChogArt from "@/components/ChogArt";
 import GameScreen from "@/components/GameScreen";
+import BoardSkeleton from "@/components/BoardSkeleton";
 import StreakChip, { rememberWallet } from "@/components/StreakChip";
 
 export default function PlayPage() {
@@ -44,32 +45,41 @@ export default function PlayPage() {
 
   return (
     <main className="page">
-      <header className="mb-5 flex items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-semibold text-mute hover:text-white">← Chogsweeper</Link>
-        {address && (
+      {address && (
+        <header className="mb-5 flex items-center justify-end gap-3">
           <button onClick={disconnect} className="btn-ghost" title="Disconnect wallet">
             {address.slice(0, 6)}…{address.slice(-4)} · Disconnect
           </button>
-        )}
-      </header>
+        </header>
+      )}
 
       {address && chogs && chogs.length > 0 && (
         <StreakChip address={address} ids={chogs.map((c) => c.id)} className="mb-4" />
       )}
 
       {!address && (
-        <section className="mx-auto max-w-[560px] text-center">
-          <h1 className="text-3xl font-black tracking-tight text-white">Pick your Chog</h1>
-          <p className="mt-2 text-[15px] text-[#cfc9ea]">Connect the wallet that holds your Chog Genesis NFTs. Each Chog gets its own board every day.</p>
-          <button className="btn-main mt-5" onClick={connect} disabled={busy}>{busy ? "Waiting for your wallet…" : "Connect wallet"}</button>
-          {error && <p className="mt-3 text-[14px] text-boom" role="alert">{error}</p>}
-          <p className="mt-6 text-[14px] text-mute">No wallet? <Link href="/judge" className="text-mint underline-offset-2 hover:underline">Try Judge mode</Link>, it works with any Chog.</p>
+        <section className="card mx-auto mt-6 max-w-[620px] overflow-hidden text-center">
+          <div className="flex justify-center -space-x-4 bg-gradient-to-b from-chog/20 to-transparent px-6 pb-2 pt-8" aria-hidden>
+            {[100, 7, 777].map((id, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={id} src={`/chogs/${id}.webp`} alt="" width={88} height={88}
+                className="h-[88px] w-[88px] rounded-2xl border-4 border-panel object-cover shadow-xl"
+                style={{ transform: `rotate(${(i - 1) * 8}deg) translateY(${i === 1 ? -6 : 0}px)`, zIndex: i === 1 ? 2 : 1 }} />
+            ))}
+          </div>
+          <div className="px-5 pb-7 pt-3 sm:px-8">
+            <h1 className="text-[32px] font-extrabold tracking-tight text-white">Play your own Chogs</h1>
+            <p className="mx-auto mt-2 max-w-[44ch] text-[15px] leading-relaxed text-text2">Connect the wallet that holds your Chog Genesis NFTs. Each Chog gets one ranked board every day, and your clears go on the reveal wall.</p>
+            <button className="btn-main btn-lg mt-6" onClick={connect} disabled={busy}>{busy ? "Waiting for your wallet…" : "Connect wallet"}</button>
+            {error && <p className="mt-3 text-[14px] text-boom" role="alert">{error}</p>}
+            <p className="mt-6 text-[14px] text-mute">No wallet? <Link href="/judge" className="link">Try Judge mode</Link>, it works with any Chog.</p>
+          </div>
         </section>
       )}
 
       {address && !picked && (
         <section className="mx-auto max-w-[760px]">
-          <h1 className="text-2xl font-black tracking-tight text-white">Pick your Chog</h1>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-white">Pick your Chog</h1>
           <p className="mt-1 text-[14px] text-mute">Each Chog has one ranked board per day. Pick one to play today's.</p>
           {!chogs && !loadErr && <p className="mt-6 text-[14px] text-mute" role="status">Looking for your Chogs…</p>}
           {loadErr && <p className="mt-6 text-[14px] text-boom" role="alert">Could not read your Chogs right now. Refresh to try again.</p>}
@@ -102,7 +112,7 @@ export default function PlayPage() {
           <button className="btn-ghost mb-4" onClick={() => setPicked(null)}>← Switch Chog</button>
           {board ? <GameScreen meta={picked} board={board} mode="daily" address={address} /> : boardErr ? (
             <p className="text-boom" role="alert">Could not load today's board. Check your connection and press Switch Chog, then pick again.</p>
-          ) : <p className="text-mute" role="status">Loading today's board…</p>}
+          ) : <BoardSkeleton text="Loading today's board…" />}
         </>
       )}
     </main>

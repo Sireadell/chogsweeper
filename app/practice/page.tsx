@@ -7,6 +7,7 @@ import { generateBoard, getChogMeta } from "@/components/deps";
 import { todayUTC } from "@/components/dailySalt";
 import GameScreen from "@/components/GameScreen";
 import PracticeBar from "@/components/PracticeBar";
+import BoardSkeleton from "@/components/BoardSkeleton";
 import {
   applyResult, EMPTY_STATS, newPracticeSalt, nextChogId, parseChogId, randomChogId, readStats, tilesForBoard, writeStats,
   type PracticeStats,
@@ -72,27 +73,31 @@ export default function PracticePage() {
 
   return (
     <main className="page">
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-semibold text-mute hover:text-white">← Chogsweeper</Link>
-        <span className="rounded-md border border-chog px-2 py-1 text-[12px] font-bold uppercase tracking-wider text-chog">Practice · not ranked</span>
+      <header className="mx-auto mb-4 flex w-full max-w-[1060px] flex-col gap-4 rounded-[20px] border border-edge bg-panel/70 p-4 sm:p-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[22px] font-extrabold tracking-tight text-white">Practice</h1>
+            <span className="chip !border-chog/50 !text-[#c4b8ff]">No wallet · not ranked</span>
+          </div>
+          <p className="mt-1 max-w-[52ch] text-[14px] leading-snug text-text2">Endless boards. Clear one and the next Chog is lined up for you.</p>
+        </div>
+        <form onSubmit={go} className="flex w-full flex-wrap items-end gap-2 lg:w-auto">
+          <label className="min-w-[120px] flex-1 lg:w-[160px] lg:flex-none">
+            <span className="mb-1 block text-[12px] font-semibold text-mute">Any Chog, 1 to {CHOG_SUPPLY}</span>
+            <input
+              inputMode="numeric"
+              value={input}
+              onChange={(e) => setInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className="field font-display font-bold"
+              placeholder="e.g. 420"
+            />
+          </label>
+          <button type="submit" className="btn-main h-11 !py-0">Play</button>
+          <button type="button" className="btn-ghost h-11" onClick={() => load(randomChogId())} aria-label="Random">🎲<span className="hidden sm:inline">Random</span></button>
+          <button type="button" className="btn-ghost h-11" onClick={() => load(upNext)}>Next Chog →</button>
+        </form>
       </header>
-
-      <form onSubmit={go} className="mx-auto mb-4 flex w-full max-w-[560px] flex-wrap items-end gap-2">
-        <label className="min-w-[120px] flex-1">
-          <span className="mb-1 block text-[12px] text-mute">Any Chog, 1 to {CHOG_SUPPLY}</span>
-          <input
-            inputMode="numeric"
-            value={input}
-            onChange={(e) => setInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            className="h-11 w-full rounded-xl border border-edge bg-panel px-3 text-base text-white outline-none focus:border-chog"
-            placeholder="e.g. 420"
-          />
-        </label>
-        <button type="submit" className="btn-main h-11 !py-0">Play</button>
-        <button type="button" className="btn-ghost h-11" onClick={() => load(randomChogId())}>🎲 Random</button>
-        <button type="button" className="btn-ghost h-11" onClick={() => load(upNext)}>Next Chog →</button>
-      </form>
-      {err && <p className="mx-auto mb-3 max-w-[560px] text-[14px] text-boom" role="alert">{err}</p>}
+      {err && <p className="mx-auto mb-3 max-w-[1060px] text-[14px] text-boom" role="alert">{err}</p>}
 
       <PracticeBar stats={stats} upNext={upNext} />
 
@@ -106,9 +111,9 @@ export default function PracticePage() {
           onFinish={(r) => finish(board, r)}
         />
       ) : (
-        <p className="text-center text-mute" role="status">Picking a Chog…</p>
+        <BoardSkeleton />
       )}
-      <p className="mx-auto mt-6 max-w-[560px] text-center text-[13px] text-mute">
+      <p className="mx-auto mt-8 max-w-[640px] text-center text-[13px] text-mute">
         No wallet needed. Every board uses a fresh random seed, so it is never a daily board. <Link href="/play" className="text-mint underline-offset-2 hover:underline">Play your ranked daily board</Link>
       </p>
     </main>

@@ -9,24 +9,34 @@ const TOTAL = 1969;
 type Wall = { total: number; cleared: number[] };
 type Tab = "mine" | "all";
 
-// One cell. Cleared Chogs show their art, owned but uncleared Chogs show a dark silhouette,
-// everything else is an empty tile with no image request at all.
+// The faint art for every cell comes from one small picture of all 1,969 Chogs
+// (public/wall-mosaic.webp, 45 per row). Cleared Chogs load their own full picture on top.
+const MOSAIC_COLS = 45;
+const MOSAIC_ROWS = Math.ceil(TOTAL / MOSAIC_COLS);
+function mosaicSpot(id: number): string {
+  const i = id - 1;
+  const x = ((i % MOSAIC_COLS) / (MOSAIC_COLS - 1)) * 100;
+  const y = (Math.floor(i / MOSAIC_COLS) / (MOSAIC_ROWS - 1)) * 100;
+  return `${x.toFixed(3)}% ${y.toFixed(3)}%`;
+}
+
+// One cell. Every cell links to that Chog in Judge mode, so the wall doubles as a picker.
 const Cell = memo(function Cell({ id, cleared, owned }: { id: number; cleared: boolean; owned: boolean }) {
   const label = cleared ? `Chog ${id}, cleared` : owned ? `Chog ${id}, not cleared yet` : `Chog ${id}`;
-  if (!cleared && !owned) return <div className="wall-cell" title={`#${id}`} aria-label={label} />;
   return (
-    <div className={`wall-cell ${owned ? "wall-owned" : ""}`} title={`#${id}`} aria-label={label}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/chogs/${id}.webp`}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        width={64}
-        height={64}
-        style={cleared ? undefined : { filter: "brightness(0) invert(1) opacity(0.22)" }}
-      />
-    </div>
+    <Link
+      href={`/judge?id=${id}`}
+      prefetch={false}
+      className={`wall-cell ${cleared ? "wall-cleared" : ""} ${owned ? "wall-owned" : ""}`}
+      title={cleared ? `#${id}, cleared` : `#${id}, play it`}
+      aria-label={label}
+      style={{ backgroundPosition: `0 0, ${mosaicSpot(id)}` }}
+    >
+      {cleared && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`/chogs/${id}.webp`} alt="" loading="lazy" decoding="async" width={64} height={64} />
+      )}
+    </Link>
   );
 });
 
@@ -71,33 +81,44 @@ export default function RevealWall() {
 
   return (
     <>
-      <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-black tracking-tight text-white">Reveal wall</h1>
-        <Link href="/hall" className="text-sm font-semibold text-mute hover:text-white">Hall of Chogs →</Link>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow">All 1,969 Chogs</p>
+          <h1 className="mt-2 text-[32px] font-extrabold tracking-tight text-white sm:text-[40px]">Reveal wall</h1>
+        </div>
+        <Link href="/hall" className="link text-sm">Hall of Chogs →</Link>
       </div>
-      <p className="mt-1 text-[14px] text-[#cfc9ea]">Every cleared board opens its Chog. The wall fills in as the community clears them.</p>
+      <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-text2">
+        Every Chog waits here under a dark cover. When anyone clears a Chog on its daily board, it lights up in full colour. Tap any Chog to play it.
+      </p>
 
-      <div className="mt-4 flex gap-2" role="tablist">
+      <div className="mt-5 flex gap-2" role="tablist">
         <button role="tab" aria-selected={tab === "mine"} className={`btn-ghost ${tab === "mine" ? "btn-on" : ""}`} onClick={() => setTab("mine")}>My Chogs</button>
         <button role="tab" aria-selected={tab === "all"} className={`btn-ghost ${tab === "all" ? "btn-on" : ""}`} onClick={() => setTab("all")}>Everyone</button>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-edge bg-panel p-4" role="status">
+      <div className="card mt-4 p-4 sm:p-5" role="status">
         {wallErr ? (
           <p className="text-boom">Could not read the wall right now. Refresh to try again.</p>
         ) : !wall ? (
           <p className="text-mute">Counting cleared Chogs…</p>
         ) : tab === "all" ? (
           <>
-            <p className="text-3xl font-black tabular-nums text-white">{wall.cleared.length} <span className="text-lg font-semibold text-mute">of {wall.total.toLocaleString()} cleared</span></p>
-            <p className="mt-1 text-[13px] text-mute">
-              {wall.cleared.length === 0 ? "0 so far. The first clear lights up the wall." : "A Chog counts once any board of it has been cleared."}
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <p className="font-display text-[34px] font-extrabold leading-none tabular-nums text-white">{wall.cleared.length} <span className="text-lg font-semibold text-mute">of {wall.total.toLocaleString()} cleared</span></p>
+              {wall.cleared.length === 0 && <Link href="/play" className="btn-main !py-2 text-[15px]">Clear the first one</Link>}
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-ink2" aria-hidden>
+              <div className="h-full rounded-full bg-gradient-to-r from-chog to-mint" style={{ width: `${Math.max(0.6, (wall.cleared.length / wall.total) * 100)}%` }} />
+            </div>
+            <p className="mt-2 text-[13px] text-mute">
+              {wall.cleared.length === 0 ? "None yet. The first daily clear lights up the wall." : "A Chog counts once any daily board of it has been cleared."}
             </p>
           </>
         ) : known && known.ids.length > 0 ? (
           <>
-            <p className="text-3xl font-black tabular-nums text-white">{mineCleared} <span className="text-lg font-semibold text-mute">of your {known.ids.length} cleared</span></p>
-            <p className="mt-1 text-[13px] text-mute">Your Chogs are outlined. Dark shapes are ones still waiting for you.</p>
+            <p className="font-display text-[34px] font-extrabold leading-none tabular-nums text-white">{mineCleared} <span className="text-lg font-semibold text-mute">of your {known.ids.length} cleared</span></p>
+            <p className="mt-1 text-[13px] text-mute">Your Chogs are outlined. Faint ones are still waiting for you.</p>
             <StreakChip className="mt-3" />
           </>
         ) : known ? (

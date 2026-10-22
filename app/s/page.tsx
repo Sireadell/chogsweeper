@@ -27,14 +27,14 @@ export default async function SharePage({ searchParams }: { searchParams: SP }) 
   const p = parseShareParams(await searchParams);
   if (!p) {
     return (
-      <main className="page">
+      <main className="page-narrow">
         <h1 className="text-2xl font-bold">That share link is not valid.</h1>
         <Link className="btn-main mt-5" href="/">Play Chogsweeper</Link>
       </main>
     );
   }
   return (
-    <main className="page" style={{ maxWidth: 520 }}>
+    <main className="page-narrow" style={{ maxWidth: 560 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={cardPath(p)} alt={`Chog #${p.token} cleared in ${formatTime(p.time)} on ${p.date}`} style={{ width: "100%", height: "auto", borderRadius: 16 }} />
       <div className="mt-5 flex flex-wrap gap-3">

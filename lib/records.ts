@@ -55,6 +55,52 @@ export interface RecordStore {
   cotdEntry(date: string, wallet: string): Promise<CotdEntry | null>;
 }
 
+// ---------------------------------------------------------------- Daily Pot (separate namespace)
+// Kept apart from everything above: pot runs never touch Chog records or the Chog of the day board.
+// One counted run per wallet per pot day. startedAt and finishedAt are the server clock, and the
+// time is measured by the server (lib/pot.ts checkPotRun), never taken from the browser.
+export type PotRun = {
+  day: number; // contract day number (UTC days since 1970)
+  date: string; // the same day as YYYY-MM-DD
+  wallet: string; // lowercase 0x address
+  tokenId: number; // the Chog of the day that day
+  startedAt: number; // ms since epoch, server clock
+  finishedAt?: number;
+  won?: boolean;
+  seconds?: number; // server-timed, only meaningful when won
+  moves?: number;
+  reason?: string; // why a run did not count, when it did not
+};
+export type PotRunStart = { ok: true; run: PotRun } | { ok: false; run: PotRun };
+export type PotRunFinish =
+  | { ok: true; run: PotRun }
+  | { ok: false; reason: "not-started" | "already-finished"; run?: PotRun };
+export type PotRunResult = { won: boolean; seconds: number; moves: number; at: number; reason?: string };
+// Progress of reading a day's Entered events from the chain, so a slow read can resume.
+export type PotScan = { from: number; to: number; next: number; wallets: string[] };
+
+export interface PotRunStore {
+  potStart(run: PotRun): Promise<PotRunStart>;
+  potFinish(day: number, wallet: string, r: PotRunResult): Promise<PotRunFinish>;
+  potRuns(day: number): Promise<PotRun[]>;
+  potRun(day: number, wallet: string): Promise<PotRun | null>;
+  potScanGet(day: number): Promise<PotScan | null>;
+  potScanSet(day: number, scan: PotScan): Promise<void>;
+}
+
+// Wins only, fastest first, ties to whoever finished first, then the lower wallet (same order as pickPotWinners).
+export function rankPotRuns(runs: PotRun[]): PotRun[] {
+  return runs
+    .filter((r) => r.won === true && typeof r.seconds === "number")
+    .sort((a, b) => a.seconds! - b.seconds! || (a.finishedAt ?? 0) - (b.finishedAt ?? 0) || (a.wallet < b.wallet ? -1 : a.wallet > b.wallet ? 1 : 0));
+}
+
+function finishPot(cur: PotRun, r: PotRunResult): PotRun {
+  const out: PotRun = { ...cur, finishedAt: r.at, won: r.won, seconds: r.seconds, moves: r.moves };
+  if (r.reason) out.reason = r.reason;
+  return out;
+}
+
 function finishEntry(cur: CotdEntry, r: CotdResult): CotdEntry {
   return { ...cur, finishedAt: r.at, won: r.won, seconds: r.seconds, moves: r.moves };
 }
@@ -89,9 +135,11 @@ type Db = {
   lastWin: Record<string, string>;
   days: Record<string, DayResult>;
   cotd?: Record<string, Record<string, CotdEntry>>;
+  pot?: Record<string, Record<string, PotRun>>;
+  potScan?: Record<string, PotScan>;
 };
 
-export class FileRecordStore implements RecordStore {
+export class FileRecordStore implements RecordStore, PotRunStore {
   private queue: Promise<unknown> = Promise.resolve();
   constructor(private file = path.join(process.cwd(), "data", "records.json")) {}
 
@@ -171,17 +219,63 @@ export class FileRecordStore implements RecordStore {
   async cotdEntry(date: string, wallet: string) {
     return (await this.load()).cotd?.[date]?.[wallet] ?? null;
   }
+
+  potStart(run: PotRun): Promise<PotRunStart> {
+    return this.serial(async () => {
+      const db = await this.load();
+      const day = ((db.pot ??= {})[String(run.day)] ??= {});
+      if (day[run.wallet]) return { ok: false as const, run: day[run.wallet] };
+      day[run.wallet] = run;
+      await this.save(db);
+      return { ok: true as const, run };
+    });
+  }
+
+  potFinish(day: number, wallet: string, r: PotRunResult): Promise<PotRunFinish> {
+    return this.serial(async () => {
+      const db = await this.load();
+      const cur = db.pot?.[String(day)]?.[wallet];
+      if (!cur) return { ok: false as const, reason: "not-started" as const };
+      if (cur.finishedAt) return { ok: false as const, reason: "already-finished" as const, run: cur };
+      const run = finishPot(cur, r);
+      db.pot![String(day)][wallet] = run;
+      await this.save(db);
+      return { ok: true as const, run };
+    });
+  }
+
+  async potRuns(day: number) {
+    return Object.values((await this.load()).pot?.[String(day)] ?? {});
+  }
+
+  async potRun(day: number, wallet: string) {
+    return (await this.load()).pot?.[String(day)]?.[wallet] ?? null;
+  }
+
+  async potScanGet(day: number) {
+    return (await this.load()).potScan?.[String(day)] ?? null;
+  }
+
+  potScanSet(day: number, scan: PotScan): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.load();
+      (db.potScan ??= {})[String(day)] = scan;
+      await this.save(db);
+    });
+  }
 }
 
 // Hosted store on Upstash Redis over its REST API (plain fetch, no extra package).
 // Keys: chog:ids (set of token ids), chog:rec:ID, chog:lastwin:ID, chog:day:ID:DATE (the
 // one-result-per-day lock) and cotd:DATE (hash of wallet to entry).
+// Daily Pot keys live under pot: only: pot:run:DAY (hash of wallet to run), pot:done:DAY:WALLET
+// (the one-finish lock) and pot:scan:DAY (progress reading that day's entrants from the chain).
 type Fetch = (
   url: string,
   init: { method: string; headers: Record<string, string>; body: string },
 ) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
-export class UpstashRecordStore implements RecordStore {
+export class UpstashRecordStore implements RecordStore, PotRunStore {
   private url: string;
   constructor(url: string, private token: string, private doFetch: Fetch = fetch as unknown as Fetch) {
     this.url = url.replace(/\/+$/, "");
@@ -252,6 +346,44 @@ export class UpstashRecordStore implements RecordStore {
   async cotdEntry(date: string, wallet: string) {
     return this.parse<CotdEntry>(await this.cmd("HGET", `cotd:${date}`, wallet));
   }
+
+  async potStart(run: PotRun): Promise<PotRunStart> {
+    // HSETNX is the one-run-per-day lock: two quick Start presses cannot both open a run.
+    const made = await this.cmd<number>("HSETNX", `pot:run:${run.day}`, run.wallet, JSON.stringify(run));
+    if (made === 1) return { ok: true, run };
+    return { ok: false, run: (await this.potRun(run.day, run.wallet)) ?? run };
+  }
+
+  async potFinish(day: number, wallet: string, r: PotRunResult): Promise<PotRunFinish> {
+    const cur = await this.potRun(day, wallet);
+    if (!cur) return { ok: false, reason: "not-started" };
+    if (cur.finishedAt) return { ok: false, reason: "already-finished", run: cur };
+    // SET NX lock so two finish requests sent at once cannot both write a result.
+    const first = await this.cmd("SET", `pot:done:${day}:${wallet}`, String(r.at), "NX");
+    if (first !== "OK") return { ok: false, reason: "already-finished", run: (await this.potRun(day, wallet)) ?? cur };
+    const run = finishPot(cur, r);
+    await this.cmd("HSET", `pot:run:${day}`, wallet, JSON.stringify(run));
+    return { ok: true, run };
+  }
+
+  async potRuns(day: number) {
+    const flat = await this.cmd<string[]>("HGETALL", `pot:run:${day}`);
+    const out: PotRun[] = [];
+    for (let i = 1; i < flat.length; i += 2) out.push(JSON.parse(flat[i]) as PotRun);
+    return out;
+  }
+
+  async potRun(day: number, wallet: string) {
+    return this.parse<PotRun>(await this.cmd("HGET", `pot:run:${day}`, wallet));
+  }
+
+  async potScanGet(day: number) {
+    return this.parse<PotScan>(await this.cmd("GET", `pot:scan:${day}`));
+  }
+
+  async potScanSet(day: number, scan: PotScan) {
+    await this.cmd("SET", `pot:scan:${day}`, JSON.stringify(scan));
+  }
 }
 
 let store: RecordStore | undefined;
@@ -263,4 +395,11 @@ export function getStore(): RecordStore {
 }
 export function setStore(s: RecordStore) {
   store = s;
+}
+
+// The Daily Pot uses the same backing store (file locally, Upstash when hosted), under its own keys.
+export function getPotStore(): PotRunStore {
+  const s = getStore() as RecordStore & Partial<PotRunStore>;
+  if (typeof s.potStart !== "function") throw new Error("The record store has no Daily Pot support.");
+  return s as RecordStore & PotRunStore;
 }

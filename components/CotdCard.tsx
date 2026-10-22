@@ -64,13 +64,13 @@ export default function CotdCard({ full = false, hideActions = false }: { full?:
   return (
     <section className="cotd-card" aria-label="Chog of the day">
       <div className="flex gap-4">
-        <div className="relative aspect-square w-[104px] shrink-0 overflow-hidden rounded-xl border border-edge [container-type:inline-size] sm:w-[132px]">
+        <div className="relative aspect-square w-[104px] shrink-0 overflow-hidden rounded-2xl border-2 border-chog/60 shadow-[0_14px_40px_-14px_rgba(131,110,249,0.9)] [container-type:inline-size] sm:w-[140px]">
           <ChogArt src={data.meta.image} tokenId={data.meta.id} className="h-full w-full" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-mint">Chog of the day</p>
-          <h2 className="truncate text-xl font-black tracking-tight text-white">{chogLabel(data.meta.id)}</h2>
-          <p className="text-[13px] text-[#cfc9ea]">
+          <p className="eyebrow">Chog of the day</p>
+          <h2 className="mt-0.5 truncate text-[26px] font-extrabold leading-tight tracking-tight text-white">{chogLabel(data.meta.id)}</h2>
+          <p className="mt-1 text-[13px] leading-snug text-text2">
             One shared board. Holders get one ranked try, fastest clear wins. New Chog in{" "}
             <b className="tabular-nums text-white">{clock || "--:--:--"}</b>
           </p>
@@ -84,7 +84,7 @@ export default function CotdCard({ full = false, hideActions = false }: { full?:
       </div>
 
       {!full && (
-        <p className="mt-3 text-[13px] text-[#cfc9ea]" data-testid="cleared-today">
+        <p className="mt-4 text-[13px] text-text2" data-testid="cleared-today">
           <b className="text-white">{data.cleared ?? 0}</b> ranked {(data.cleared ?? 0) === 1 ? "clear" : "clears"} today
           {data.recent && data.recent.length > 0 && (
             <> · latest: {data.recent.slice(0, 3).map((r) => `${r.wallet} in ${fmt(r.seconds)}`).join(", ")}</>
@@ -92,13 +92,15 @@ export default function CotdCard({ full = false, hideActions = false }: { full?:
         </p>
       )}
 
-      <div className="mt-4 grid gap-4 text-[14px] sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 border-t border-edge pt-4 text-[14px] sm:grid-cols-2">
         <div>
           <h3 className="text-[12px] font-semibold uppercase tracking-wider text-mute">
             Fastest today · {data.attempts} {data.attempts === 1 ? "try" : "tries"}
           </h3>
           {top.length === 0 ? (
-            <p className="mt-1 text-mute">Nobody has cleared it yet. Be first.</p>
+            <p className="mt-2 rounded-xl border border-dashed border-edge2 px-3 py-2.5 text-text2">
+              <b className="text-white">The top spot is open.</b> Nobody has cleared it yet. Be first.
+            </p>
           ) : (
             <ol className="mt-1 space-y-1">
               {top.map((r) => (

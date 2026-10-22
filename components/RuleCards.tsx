@@ -22,18 +22,17 @@ function status(r: FiredRule, b: Board, s: GameState): string {
 export default function RuleCards({ board, state }: { board: Board; state: GameState }) {
   if (!board.rules.length) return null;
   return (
-    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Rules from this Chog's traits">
+    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1" aria-label="Rules from this Chog's traits">
       {board.rules.map((r, k) => {
         const used = r.id === "head-shield" && state.shieldedAt.length > 0;
         return (
           <li key={r.id} className={`rule-card ${used ? "rule-used" : ""}`} style={{ animationDelay: `${k * 110}ms` }}>
             <span className="rule-ico" aria-hidden>{ICON[r.id] ?? "✦"}</span>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold leading-tight text-white">
-                {TITLE[r.id] ?? r.id} <span className="font-normal text-mute">from {r.trait}: {r.value}</span>
-              </p>
-              <p className="mt-0.5 text-[13px] leading-snug text-[#cfc9ea]">{r.why}</p>
-              <p className="mt-1 text-[12px] font-medium text-mint">{status(r, board, state)}</p>
+              <p className="font-display text-[15px] font-bold leading-tight text-white">{TITLE[r.id] ?? r.id}</p>
+              <p className="text-[12px] text-mute">from {r.trait}: {r.value}</p>
+              <p className="mt-1 text-[13px] leading-snug text-text2">{r.why}</p>
+              <p className="rule-state">{status(r, board, state)}</p>
             </div>
           </li>
         );

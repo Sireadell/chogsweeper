@@ -4,7 +4,20 @@ import type { Board as BoardT, ChogMeta } from "@/lib/types";
 import type { GameState } from "./gameLogic";
 import ChogArt from "./ChogArt";
 
-const NUM_COLOR = ["", "#7dd3fc", "#86efac", "#fca5a5", "#c4b5fd", "#fdba74", "#5eead4", "#f9a8d4", "#e5e7eb"];
+const NUM_COLOR = ["", "#7dd3fc", "#86efac", "#fda4af", "#c4b5fd", "#fdba74", "#5eead4", "#f9a8d4", "#f1f5f9"];
+
+// Win confetti: small tiles in the game's colours, thrown out from the middle of the board.
+const CONFETTI = Array.from({ length: 22 }, (_, k) => {
+  const a = (k / 22) * Math.PI * 2 + (k % 3) * 0.3;
+  const r = 22 + (k % 5) * 6;
+  return {
+    "--dx": `${Math.round(Math.cos(a) * r)}cqw`,
+    "--dy": `${Math.round(Math.sin(a) * r - 12)}cqw`,
+    "--r": `${(k % 2 ? 1 : -1) * (180 + k * 23)}deg`,
+    "--t": `${0.45 + (k % 4) * 0.06}s`,
+    "--c": ["#8bf5c0", "#a493ff", "#ffd166", "#ff8fa3", "#7dd3fc"][k % 5],
+  } as React.CSSProperties;
+});
 
 type Props = {
   board: BoardT;
@@ -104,13 +117,18 @@ export default function Board({ board, meta, state, flagMode, onReveal, onFlag, 
               {state.shieldedAt.includes(i) && <span className="glyph">🛡</span>}
               {!rev && fl && !wrongFlag && <span className="glyph">⚑</span>}
               {wrongFlag && <span className="glyph">✕</span>}
-              {showMine && <span className="glyph">{state.hit === i ? "💥" : "●"}</span>}
+              {showMine && (state.hit === i ? <span className="glyph">💥</span> : <span className="mine-dot" aria-hidden />)}
             </button>
           );
         })}
       </div>
       {won && <div className="board-burst" aria-hidden />}
       {won && <div className="board-sheen" aria-hidden />}
+      {won && (
+        <div className="board-confetti" aria-hidden>
+          {CONFETTI.map((st, k) => <i key={k} style={st} />)}
+        </div>
+      )}
     </div>
   );
 }

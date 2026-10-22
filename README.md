@@ -54,14 +54,14 @@ Check a past day at **https://chogsweeper.vercel.app/verify**. It takes about a 
 What this proves: the boards were fixed before anyone played and were not changed afterwards.
 What it does not prove: the site itself can see the secret during the day.
 
-The fingerprints are posted from a small wallet as a plain data post, at about 00:05 UTC every day.
+The fingerprints are posted from a small wallet as a plain data post, once a day just after midnight UTC. A daily timer has posted them on its own since October 21.
 
 ## Reasons to come back
 
 | Feature | What it is |
 |---|---|
 | Daily board | One board per Chog per day. Its record and streak belong to the Chog, so they stay with it if it is sold |
-| Chog of the day | One shared board for everyone. Holders sign a message with a wallet that holds any Chog to get one ranked try. Fastest clear wins. The day's Chog is picked from the date and the public fingerprint, so anyone can work it out |
+| Chog of the day | One shared board for everyone. Holders sign a message with a wallet that holds any Chog to get one ranked try. Fastest clear wins, and after a ranked win you see your place and how far behind the top time you were. The day's Chog is picked from the date and the public fingerprint, so anyone can work it out |
 | Streaks | Current and best streak, with a "clear today to keep it" reminder |
 | Reveal wall | All 1,969 Chogs, filling in with art as players clear them |
 | Hall | Today's top 10 and yesterday's winner |
@@ -84,12 +84,13 @@ Hold at least 1,000 $CHOG and you get one safe-tile hint per board. The tile glo
 
 **Clarity.** No wallet needed to play. Judge mode and practice work for anyone in under a minute.
 
-**Execution.** Live on Vercel, reading Monad mainnet directly. 116 automated tests. Daily fingerprints posted on Monad since October 19.
+**Execution.** Live on Vercel, reading Monad mainnet directly. 201 automated tests. Daily fingerprints posted on Monad since October 19.
 
 ## What this is not
 
 - **No real holder has played a ranked run yet.** I tested the holder check and message signing against the real chain with a throwaway wallet, not yet with a real holder.
-- **No contract of my own.** The game reads the existing Chog Genesis collection and the $CHOG token, and posts one small data message a day. Nothing is minted and no token is spent.
+- **The free game needs no contract of my own.** It reads the existing Chog Genesis collection and the $CHOG token, and posts one small data message a day. Nothing is minted and no token is spent.
+- **The Daily Pot is built but not open.** Its contract is live on Monad mainnet at 0xE330Ff89faC8685b1a2b564407A6b5A2EbDA4c2A and passes 56 tests of its own, but the pot page on the site is switched off. Prize pools you pay to enter can be restricted where you live.
 - **The fairness check has a limit.** It proves boards were not changed afterwards, not that the site never saw the secret.
 - **The trait rules are my design.** The collection does not define them.
 - **Records live on a free database.** That is fine for now, but it is not built for a large crowd.

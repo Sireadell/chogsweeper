@@ -7,6 +7,7 @@ import { chogFromQuery } from "@/lib/names";
 import { generateBoard, getChogMeta } from "@/components/deps";
 import { todayUTC } from "@/components/dailySalt";
 import GameScreen from "@/components/GameScreen";
+import BoardSkeleton from "@/components/BoardSkeleton";
 
 const rand = () => 1 + Math.floor(Math.random() * CHOG_SUPPLY);
 
@@ -50,34 +51,37 @@ export default function JudgePage() {
 
   return (
     <main className="page">
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-semibold text-mute hover:text-white">← Chogsweeper</Link>
-        <span className="flex items-center gap-3">
-          <Link href="/practice" className="text-sm font-semibold text-mint underline-offset-2 hover:underline">Endless practice →</Link>
-          <span className="rounded-md border border-edge px-2 py-1 text-[12px] font-semibold uppercase tracking-wider text-mute">Judge mode · not ranked</span>
-        </span>
+      <header className="mx-auto mb-5 flex w-full max-w-[1060px] flex-col gap-4 rounded-[20px] border border-edge bg-panel/70 p-4 sm:p-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[22px] font-extrabold tracking-tight text-white">Judge mode</h1>
+            <span className="chip !border-mint/40 !text-mint">No wallet · not ranked</span>
+          </div>
+          <p className="mt-1 max-w-[52ch] text-[14px] leading-snug text-text2">
+            Play any of the 1,969 Chogs. Each one has its own rules from its traits. <Link href="/practice" className="link">Endless practice →</Link>
+          </p>
+        </div>
+        <form onSubmit={go} className="flex w-full flex-wrap items-end gap-2 lg:w-auto">
+          <label className="min-w-[140px] flex-1 lg:w-[180px] lg:flex-none">
+            <span className="mb-1 block text-[12px] font-semibold text-mute">Chog number, 1 to {CHOG_SUPPLY}</span>
+            <input
+              inputMode="numeric"
+              value={input}
+              onChange={(e) => setInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className="field font-display font-bold"
+              placeholder="e.g. 420"
+            />
+          </label>
+          <button type="submit" className="btn-main h-11 !py-0">Play</button>
+          <button type="button" className="btn-ghost h-11" onClick={() => load(rand())} aria-label="Random">🎲<span className="hidden sm:inline">Random</span></button>
+        </form>
       </header>
-
-      <form onSubmit={go} className="mx-auto mb-5 flex w-full max-w-[560px] flex-wrap items-end gap-2">
-        <label className="min-w-[140px] flex-1">
-          <span className="mb-1 block text-[12px] text-mute">Chog number, 1 to {CHOG_SUPPLY}</span>
-          <input
-            inputMode="numeric"
-            value={input}
-            onChange={(e) => setInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            className="h-11 w-full rounded-xl border border-edge bg-panel px-3 text-base text-white outline-none focus:border-chog"
-            placeholder="e.g. 420"
-          />
-        </label>
-        <button type="submit" className="btn-main h-11 !py-0">Play</button>
-        <button type="button" className="btn-ghost h-11" onClick={() => load(rand())}>🎲 Random</button>
-      </form>
-      {err && <p className="mx-auto mb-3 max-w-[560px] text-[14px] text-boom" role="alert">{err}</p>}
+      {err && <p className="mx-auto mb-3 max-w-[1060px] text-[14px] text-boom" role="alert">{err}</p>}
 
       {meta && salt ? (
         <GameScreen key={salt} meta={meta} board={generateBoard(meta, date, salt)} mode="practice" onAgain={() => load(rand())} />
       ) : (
-        <p className="text-center text-mute" role="status">Picking a Chog…</p>
+        <BoardSkeleton />
       )}
     </main>
   );

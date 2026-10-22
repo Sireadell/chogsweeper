@@ -40,7 +40,7 @@ const mono = { fontFamily: "ui-monospace, monospace", wordBreak: "break-all" } a
 function StepHead({ n, title }: { n: number; title: string }) {
   return (
     <h2 className="flex items-center gap-3 text-lg font-bold text-white">
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-chog text-sm">{n}</span>
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-chog text-sm font-extrabold shadow-[0_3px_0_#4b33c4]">{n}</span>
       {title}
     </h2>
   );
@@ -78,7 +78,7 @@ export default function ProofSteps() {
   }
 
   const field = { background: "var(--panel)", border: "1px solid var(--edge)", borderRadius: 8, padding: "10px 12px", color: "inherit", font: "inherit" } as const;
-  const card = "rounded-2xl border border-edge bg-panel p-4";
+  const card = "card p-4 sm:p-5";
   const nowOk = now && now.chain.found && now.chain.data?.toLowerCase() === now.commit.toLowerCase();
 
   return (

@@ -1,15 +1,11 @@
-import Link from "next/link";
 import RevealWall from "@/components/RevealWall";
 
-export const metadata = { title: "Reveal wall" };
+export const metadata = { title: "Reveal wall", description: "All 1,969 Chog Genesis NFTs. Each one lights up when someone clears its daily board." };
 
 export default function WallPage() {
   return (
     <main className="page">
-      <header className="mb-5">
-        <Link href="/" className="text-sm font-semibold text-mute hover:text-white">← Chogsweeper</Link>
-      </header>
-      <RevealWall />
+      <div className="pt-2"><RevealWall /></div>
     </main>
   );
 }
