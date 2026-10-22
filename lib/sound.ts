@@ -2,7 +2,10 @@
 // Browsers keep sound off until the person has tapped something, so the audio context is
 // only created and resumed from a tap (see unlockAudio). Mute is remembered in localStorage.
 
-export type Note = { freq: number; start: number; dur: number; gain: number; type: OscillatorType };
+// freq is the pitch in Hz. `to` slides the pitch to that value by the end of the note.
+// `noise` plays a burst of static instead of a tone, with freq as the filter's opening pitch
+// (it closes down to `to`), which is what makes an explosion.
+export type Note = { freq: number; start: number; dur: number; gain: number; type: OscillatorType; to?: number; noise?: boolean };
 export type SoundKind = "win" | "lose" | "tap" | "open" | "flag" | "unflag" | "shield";
 
 const MUTE_KEY = "chogsweeper:muted";
@@ -13,8 +16,11 @@ const WIN_FREQS = [523.25, 659.25, 783.99, 1046.5];
 export function notesFor(kind: SoundKind): Note[] {
   if (kind === "win") {
     return [
-      ...WIN_FREQS.map((freq, i): Note => ({ freq, start: i * 0.11, dur: i === 3 ? 0.7 : 0.2, gain: 0.18, type: "triangle" })),
-      { freq: 1568, start: 0.33, dur: 0.6, gain: 0.06, type: "sine" },
+      ...WIN_FREQS.map((freq, i): Note => ({ freq, start: i * 0.11, dur: i === 3 ? 0.8 : 0.22, gain: 0.5, type: "triangle" })),
+      // The same run an octave lower, so it sounds full rather than thin.
+      ...WIN_FREQS.map((freq, i): Note => ({ freq: freq / 2, start: i * 0.11, dur: i === 3 ? 0.8 : 0.22, gain: 0.35, type: "sine" })),
+      { freq: 1568, start: 0.33, dur: 0.7, gain: 0.2, type: "sine" },
+      { freq: 2093, start: 0.36, dur: 0.6, gain: 0.12, type: "sine" },
     ];
   }
   if (kind === "tap") {
@@ -45,10 +51,13 @@ export function notesFor(kind: SoundKind): Note[] {
       { freq: 196, start: 0.05, dur: 0.3, gain: 0.1, type: "sine" },
     ];
   }
+  // Lose: a boom. Static that closes down, a low thump that drops, then two sad falling notes.
   return [
-    { freq: 293.66, start: 0, dur: 0.22, gain: 0.12, type: "sine" },
-    { freq: 220, start: 0.18, dur: 0.4, gain: 0.12, type: "sine" },
-    { freq: 110, start: 0, dur: 0.35, gain: 0.12, type: "triangle" },
+    { freq: 2600, to: 90, start: 0, dur: 0.75, gain: 0.9, type: "sine", noise: true },
+    { freq: 150, to: 38, start: 0, dur: 0.6, gain: 0.95, type: "sine" },
+    { freq: 80, to: 30, start: 0.02, dur: 0.7, gain: 0.5, type: "triangle" },
+    { freq: 293.66, start: 0.35, dur: 0.25, gain: 0.3, type: "triangle" },
+    { freq: 220, start: 0.55, dur: 0.5, gain: 0.3, type: "triangle" },
   ];
 }
 
@@ -98,6 +107,7 @@ export function writeMuted(muted: boolean, s: StorageLike | null = store()): voi
 }
 
 let ctx: AudioContext | null = null;
+let master: AudioNode | null = null;
 let unlocked = false;
 
 function getCtx(): AudioContext | null {
@@ -106,6 +116,15 @@ function getCtx(): AudioContext | null {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return null;
     ctx = new Ctor();
+    // A limiter on the way out lets the big sounds be loud without crackling.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -8;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.15;
+    limiter.connect(ctx.destination);
+    master = limiter;
     return ctx;
   } catch {
     return null;
@@ -124,17 +143,35 @@ export function play(kind: SoundKind, muted: boolean): void {
   if (muted || !unlocked || !ctx) return;
   try {
     const t0 = ctx.currentTime + 0.02;
+    const out = master ?? ctx.destination;
     for (const n of notesFor(kind)) {
-      const osc = ctx.createOscillator();
       const g = ctx.createGain();
-      osc.type = n.type;
-      osc.frequency.value = n.freq;
       g.gain.setValueAtTime(0.0001, t0 + n.start);
       g.gain.exponentialRampToValueAtTime(n.gain, t0 + n.start + 0.015);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + n.start + n.dur);
-      osc.connect(g).connect(ctx.destination);
-      osc.start(t0 + n.start);
-      osc.stop(t0 + n.start + n.dur + 0.05);
+      if (n.noise) {
+        const len = Math.ceil(ctx.sampleRate * (n.dur + 0.05));
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const filter = ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(n.freq, t0 + n.start);
+        if (n.to) filter.frequency.exponentialRampToValueAtTime(n.to, t0 + n.start + n.dur);
+        src.connect(filter).connect(g).connect(out);
+        src.start(t0 + n.start);
+        src.stop(t0 + n.start + n.dur + 0.05);
+      } else {
+        const osc = ctx.createOscillator();
+        osc.type = n.type;
+        osc.frequency.setValueAtTime(n.freq, t0 + n.start);
+        if (n.to) osc.frequency.exponentialRampToValueAtTime(n.to, t0 + n.start + n.dur);
+        osc.connect(g).connect(out);
+        osc.start(t0 + n.start);
+        osc.stop(t0 + n.start + n.dur + 0.05);
+      }
     }
   } catch { /* sound is a bonus, never break the game */ }
 }

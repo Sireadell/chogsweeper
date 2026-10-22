@@ -13,12 +13,18 @@ describe("sound notes", () => {
     const lead = n.filter((x) => x.type === "triangle").map((x) => x.freq);
     expect(lead).toEqual([...lead].sort((a, b) => a - b));
   });
-  it("loss is softer and shorter than the win", () => {
-    const win = notesFor("win"), lose = notesFor("lose");
-    expect(Math.max(...lose.map((x) => x.gain))).toBeLessThan(Math.max(...win.map((x) => x.gain)));
-    expect(totalDuration(lose)).toBeLessThan(totalDuration(win));
-    const f = lose.map((x) => x.freq);
-    expect(f).toEqual([...f].sort((a, b) => b - a));
+  it("win and loss are both loud", () => {
+    expect(Math.max(...notesFor("win").map((x) => x.gain))).toBeGreaterThanOrEqual(0.4);
+    expect(Math.max(...notesFor("lose").map((x) => x.gain))).toBeGreaterThanOrEqual(0.8);
+  });
+  it("loss is a boom: a static burst that closes down plus a thump that drops", () => {
+    const lose = notesFor("lose");
+    const burst = lose.find((x) => x.noise);
+    expect(burst).toBeTruthy();
+    expect(burst!.to!).toBeLessThan(burst!.freq);
+    const thump = lose.find((x) => !x.noise && x.to && x.freq < 200);
+    expect(thump).toBeTruthy();
+    expect(totalDuration(lose)).toBeLessThan(1.2);
   });
 });
 
