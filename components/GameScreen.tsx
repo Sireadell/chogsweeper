@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Board as BoardT, ChogMeta } from "@/lib/types";
 import { chord, flag, initGame, minesLeft, reveal, seconds, type GameState } from "./gameLogic";
 import Board from "./Board";
@@ -12,7 +12,7 @@ import ShareButton from "./ShareButton";
 import ProofBadge from "./ProofBadge";
 import SoundToggle from "./SoundToggle";
 import { artName, chogLabel } from "@/lib/names";
-import { play, readMuted, unlockAudio, writeMuted } from "@/lib/sound";
+import { play, readMuted, soundForMove, unlockAudio, writeMuted, type MoveSummary } from "@/lib/sound";
 import type { Move } from "@/lib/game";
 
 export type Mode = "daily" | "practice" | "cotd" | "cotd-free";
@@ -71,6 +71,23 @@ export default function GameScreen({
     if (state.status === "won") play("win", muted);
     else if (state.status === "lost") play("lose", muted);
   }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Little sounds while playing: a click for an opened square, a rising run when a patch opens,
+  // a tick for flags, a ping when the Head shield takes a hit.
+  const lastMove = useRef<MoveSummary | null>(null);
+  useEffect(() => {
+    const now: MoveSummary = {
+      revealed: state.g.revealed.filter(Boolean).length,
+      flagged: state.g.flagged.filter(Boolean).length,
+      shielded: state.g.shielded.length,
+      over: state.status === "won" || state.status === "lost",
+    };
+    const prev = lastMove.current;
+    lastMove.current = now;
+    if (!prev || state.g.moves.length === 0) return; // a fresh board makes no sound
+    const kind = soundForMove(prev, now);
+    if (kind) play(kind, muted);
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Personal best per board size, kept in this browser only.
   const [bestNote, setBestNote] = useState<string | null>(null);

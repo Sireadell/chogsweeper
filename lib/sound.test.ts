@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { notesFor, play, readMuted, totalDuration, unlockAudio, writeMuted } from "./sound";
+import { notesFor, play, readMuted, soundForMove, totalDuration, unlockAudio, writeMuted } from "./sound";
 
 function fakeStore() {
   const m = new Map<string, string>();
@@ -19,6 +19,29 @@ describe("sound notes", () => {
     expect(totalDuration(lose)).toBeLessThan(totalDuration(win));
     const f = lose.map((x) => x.freq);
     expect(f).toEqual([...f].sort((a, b) => b - a));
+  });
+});
+
+describe("move sounds", () => {
+  const base = { revealed: 0, flagged: 0, shielded: 0, over: false };
+  it("every small sound is short and quiet", () => {
+    for (const k of ["tap", "open", "flag", "unflag", "shield"] as const) {
+      const n = notesFor(k);
+      expect(totalDuration(n)).toBeLessThan(0.5);
+      expect(Math.max(...n.map((x) => x.gain))).toBeLessThanOrEqual(0.1);
+    }
+  });
+  it("picks tap, open, flag, unflag and shield from the counts", () => {
+    expect(soundForMove(base, { ...base, revealed: 1 })).toBe("tap");
+    expect(soundForMove(base, { ...base, revealed: 9 })).toBe("open");
+    expect(soundForMove(base, { ...base, flagged: 1 })).toBe("flag");
+    expect(soundForMove({ ...base, flagged: 1 }, base)).toBe("unflag");
+    expect(soundForMove(base, { ...base, shielded: 1 })).toBe("shield");
+    expect(soundForMove(base, base)).toBeNull();
+  });
+  it("stays quiet when the game ends or the board resets", () => {
+    expect(soundForMove(base, { ...base, revealed: 3, over: true })).toBeNull();
+    expect(soundForMove({ ...base, revealed: 5 }, base)).toBeNull();
   });
 });
 
